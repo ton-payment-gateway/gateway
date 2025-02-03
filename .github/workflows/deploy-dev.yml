@@ -1,0 +1,16 @@
+name: Deploy to Dev Server
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  deploy:
+    runs-on: [self-hosted]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Deploy to Server
+        run: cd ~/gateway && git restore . && git remote prune origin && git checkout dev && git pull && docker compose up -d --build --force-recreate

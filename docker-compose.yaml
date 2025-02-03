@@ -1,0 +1,19 @@
+services:
+  gateway:
+    image: gateway
+    build: .
+    ports:
+      - target: 3030
+        published: 3030
+        protocol: tcp
+        mode: host
+    env_file:
+      - .env
+    restart: always
+    networks:
+      - shared_network
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '20M'
+        max-file: '10'
