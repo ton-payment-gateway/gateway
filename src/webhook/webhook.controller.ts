@@ -3,7 +3,7 @@ import { Body, Controller, Post } from '@nestjs/common';
 
 import { ROUTER } from 'src/_core/router';
 import { ResExceptionDto } from 'src/_core/exception/dto/exception.dto';
-import { WebhookService } from './ton.service';
+import { WebhookService } from './webhook.service';
 import { WebhookDto } from './dto/webhook.dto';
 
 @ApiResponse({

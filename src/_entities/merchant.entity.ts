@@ -2,6 +2,7 @@ import {
   BaseEntity,
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
   JoinColumn,
   ManyToOne,
@@ -38,7 +39,6 @@ export class Merchant extends BaseEntity {
 
   @Column({
     type: 'jsonb',
-    default: null,
     nullable: false,
   })
   keys: {
@@ -65,6 +65,12 @@ export class Merchant extends BaseEntity {
     type: 'timestamptz',
   })
   updatedAt!: Date;
+
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'timestamptz',
+  })
+  deletedAt!: Date;
 
   @ManyToOne(() => User, (user) => user.merchants)
   @JoinColumn({ name: 'user_id' })

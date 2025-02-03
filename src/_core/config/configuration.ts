@@ -30,6 +30,21 @@ export default (): ApplicationConfigurations => {
       iv: process.env.APP_ENCRYPTION_IV,
       key: process.env.APP_ENCRYPTION_KEY,
     },
+    ton: {
+      blockchain: {
+        apiUrl: 'https://tonapi.io',
+        apiKey: process.env.APP_TON_API_KEY,
+      },
+      webhook: {
+        apiUrl: 'https://rt.tonapi.io',
+        apiKey: process.env.APP_TON_API_KEY,
+      },
+      client: {
+        rpc: 'https://toncenter.com/api/v2/jsonRPC',
+        rpcApiKey: process.env.APP_TON_RPC_API_KEY,
+      },
+      walletAddress: process.env.APP_TON_WALLET_ADDRESS,
+    },
     sentry: {
       dns: process.env.APP_SENTRY_DSN,
       isEnable: process.env.APP_FEATURE_SENTRY
@@ -72,6 +87,11 @@ const validSchema = Joi.object({
   // ENCRYPTION
   APP_ENCRYPTION_IV: Joi.string().required(),
   APP_ENCRYPTION_KEY: Joi.string().required(),
+
+  // TON
+  APP_TON_API_KEY: Joi.string().required(),
+  APP_TON_RPC_API_KEY: Joi.string().required(),
+  APP_TON_WALLET_ADDRESS: Joi.string().required(),
 });
 
 const validate = (data: Record<string, unknown>) => {

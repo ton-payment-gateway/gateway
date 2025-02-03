@@ -6,6 +6,7 @@ import { ResGetSessionDto } from './dto/session.dto';
 import { TokenService } from '../_utils/token/token.service';
 import { UnauthorizedException } from 'src/_core/exception/exception';
 import { UserService } from 'src/user/user.service';
+import { userFormatter } from 'src/_utils/formatter';
 
 @Injectable()
 export class AuthService {
@@ -20,18 +21,14 @@ export class AuthService {
       where: { username: body.username },
     });
 
-    console.log(existedUser);
-
     if (!existedUser) {
       throw new UnauthorizedException('Invalid username or password');
     }
 
     const isPasswordMatch = await this.bcryptService.compareHash(
-      existedUser.password,
       body.password,
+      existedUser.password,
     );
-
-    console.log(isPasswordMatch);
 
     if (!isPasswordMatch) {
       throw new UnauthorizedException('Invalid username or password');
@@ -115,9 +112,6 @@ export class AuthService {
       throw new UnauthorizedException('Invalid user');
     }
 
-    return {
-      id: user.id,
-      username: user.username,
-    };
+    return userFormatter(user);
   }
 }
