@@ -29,6 +29,14 @@ export class Transaction extends BaseEntity {
   })
   amount: string;
 
+  @Column({
+    default: 0,
+    type: 'numeric',
+    precision: 78,
+    scale: 9,
+  })
+  serviceFee: string;
+
   @Column('varchar', { nullable: false })
   @Index('uq_transaction_hash', { unique: true })
   hash: string;

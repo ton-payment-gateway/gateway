@@ -6,10 +6,10 @@ import { merchantFormatter } from 'src/_utils/formatter';
 import { SortEnum } from 'src/_utils/types';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { ResGetMerchantsDto } from './dto/get-merchants.dto';
-import { NotFoundException } from 'src/_core/exception/exception';
 import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { TonService } from 'src/_utils/ton/ton.service';
 import { UpdateMerchantDto } from './dto/update-merchant.dto';
+import { NotFoundException } from 'src/_core/exception/exception';
 
 @Injectable()
 export class MerchantService {
@@ -82,19 +82,10 @@ export class MerchantService {
     };
   }
 
-  async getOne(userId: string, id: string) {
-    const data = await this.findOne({
-      where: {
-        userId,
-        id,
-      },
-    });
+  async getOne(merchant: Merchant) {
+    const balance = await this.tonService.getBalance(merchant.keys.publicKey);
 
-    if (!data) {
-      throw new NotFoundException('Merchant not found');
-    }
-
-    return merchantFormatter(data);
+    return merchantFormatter(merchant, balance);
   }
 
   async createMerchant(userId: string, body: CreateMerchantDto) {
@@ -116,41 +107,42 @@ export class MerchantService {
 
     const res = await this.save(data);
 
-    return merchantFormatter(res);
+    return merchantFormatter(res, 0);
   }
 
-  async update(userId: string, id: string, body: UpdateMerchantDto) {
-    const data = await this.findOne({
+  async update(merchant: Merchant, body: UpdateMerchantDto) {
+    merchant.name = body.name || merchant.name;
+    merchant.webhookUrl = body.webhookUrl || merchant.webhookUrl;
+
+    const res = await this.save(merchant);
+
+    const balance = await this.tonService.getBalance(merchant.keys.publicKey);
+
+    return merchantFormatter(res, balance);
+  }
+
+  async deleteMerchant(merchant: Merchant) {
+    await this.delete(merchant.id);
+  }
+
+  async withdrawAddressesToMerchant(merchantId: string) {
+    const merchant = await this.findOne({
       where: {
-        userId,
-        id,
+        id: merchantId,
       },
+      relations: ['addresses'],
     });
 
-    if (!data) {
+    if (!merchant) {
       throw new NotFoundException('Merchant not found');
     }
 
-    data.name = body.name || data.name;
-    data.webhookUrl = body.webhookUrl || data.webhookUrl;
-
-    const res = await this.save(data);
-
-    return merchantFormatter(res);
-  }
-
-  async deleteMerchant(userId: string, id: string) {
-    const data = await this.findOne({
-      where: {
-        userId,
-        id,
-      },
-    });
-
-    if (!data) {
-      throw new NotFoundException('Merchant not found');
+    for (const address of merchant.addresses) {
+      await this.tonService.withdrawFromWallet({
+        publicKey: address.keys.publicKey,
+        secretKey: address.keys.secretKey,
+        toAddress: merchant.address,
+      });
     }
-
-    await this.delete(id);
   }
 }

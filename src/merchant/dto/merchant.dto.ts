@@ -20,10 +20,10 @@ export class ResMerchantDto {
   webhookUrl: string;
 
   @ApiProperty({
-    description: 'Address',
-    type: String,
+    description: 'Merchant balance',
+    type: Number,
   })
-  address: string;
+  balance: number;
 
   @ApiProperty({
     description: 'Created at',

@@ -15,7 +15,6 @@ import { MerchantService } from './merchant.service';
 import { HttpAuthGuard } from 'src/auth/guards/http-auth.guard';
 import { ROUTER } from 'src/_core/router';
 import { ResponseMessage } from 'src/_utils/decorators/response-message.decorator';
-import { IdDto } from 'src/_utils/dto/id.dto';
 import { AuthData } from 'src/_utils/decorators/auth-data.decorator';
 import { SessionData } from 'src/auth/types';
 import { ResMerchantDto } from './dto/merchant.dto';
@@ -23,6 +22,10 @@ import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { UpdateMerchantDto } from './dto/update-merchant.dto';
 import { PaginationDto } from 'src/_utils/dto/pagination.dto';
 import { ResGetMerchantsDto } from './dto/get-merchants.dto';
+import { MerchantOwnerGuard } from './guards/merchant-owner.guard';
+import { MerchantData } from 'src/_utils/decorators/merchant-data.decorator';
+import { Merchant } from 'src/_entities/merchant.entity';
+import { IdDto } from 'src/_utils/dto/id.dto';
 
 @ApiResponse({
   status: 400,
@@ -42,7 +45,6 @@ import { ResGetMerchantsDto } from './dto/get-merchants.dto';
 @ApiTags('Merchant')
 @Controller('merchant')
 @ApiBearerAuth()
-@UseGuards(HttpAuthGuard())
 export class MerchantController {
   constructor(private readonly merchantService: MerchantService) {}
 
@@ -52,6 +54,7 @@ export class MerchantController {
     description: 'Success',
     type: ResGetMerchantsDto,
   })
+  @UseGuards(HttpAuthGuard())
   @ResponseMessage('Get all merchant success')
   async getAll(
     @AuthData() session: SessionData,
@@ -66,12 +69,13 @@ export class MerchantController {
     description: 'Success',
     type: ResMerchantDto,
   })
+  @UseGuards(MerchantOwnerGuard)
   @ResponseMessage('Get one merchant success')
   async getOne(
-    @Param() param: IdDto,
-    @AuthData() session: SessionData,
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
   ): Promise<ResMerchantDto> {
-    return this.merchantService.getOne(session.id, param.id);
+    return this.merchantService.getOne(merchant);
   }
 
   @Post(ROUTER.MERCHANT.CREATE)
@@ -80,6 +84,7 @@ export class MerchantController {
     description: 'Success',
     type: ResMerchantDto,
   })
+  @UseGuards(HttpAuthGuard())
   @ResponseMessage('Create merchant success')
   async create(
     @Body() body: CreateMerchantDto,
@@ -94,13 +99,14 @@ export class MerchantController {
     description: 'Success',
     type: ResMerchantDto,
   })
+  @UseGuards(MerchantOwnerGuard)
   @ResponseMessage('Update merchant success')
   async update(
-    @Param() param: IdDto,
     @Body() body: UpdateMerchantDto,
-    @AuthData() session: SessionData,
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
   ): Promise<ResMerchantDto> {
-    return this.merchantService.update(session.id, param.id, body);
+    return this.merchantService.update(merchant, body);
   }
 
   @Delete(ROUTER.MERCHANT.DELETE)
@@ -108,11 +114,12 @@ export class MerchantController {
     status: 200,
     description: 'Success',
   })
+  @UseGuards(MerchantOwnerGuard)
   @ResponseMessage('Delete merchant success')
   async delete(
-    @Param() param: IdDto,
-    @AuthData() session: SessionData,
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
   ): Promise<void> {
-    return this.merchantService.deleteMerchant(session.id, param.id);
+    return this.merchantService.deleteMerchant(merchant);
   }
 }

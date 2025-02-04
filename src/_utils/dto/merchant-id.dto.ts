@@ -2,12 +2,12 @@ import { IsNotEmpty, IsUUID } from 'class-validator';
 
 import { ApiProperty } from '@nestjs/swagger';
 
-export class IdDto {
+export class MerchantIdDto {
   @ApiProperty({
-    description: 'Id',
+    description: 'Merchant Id',
     type: String,
   })
   @IsUUID()
   @IsNotEmpty()
-  id: string;
+  merchantId: string;
 }

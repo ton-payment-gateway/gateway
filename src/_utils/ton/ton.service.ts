@@ -8,7 +8,7 @@ export class TonService {
   constructor(
     private readonly blockchainService: BlockchainService,
     private readonly clientService: ClientService,
-    private readonly wbhookService: WebhookService,
+    private readonly webhookService: WebhookService,
   ) {}
 
   async createWallet() {
@@ -16,17 +16,30 @@ export class TonService {
   }
 
   async subscribeToWallet(walletId: string) {
-    return this.wbhookService.subscribeToWallet(walletId);
+    return this.webhookService.subscribeToWallet(walletId);
+  }
+
+  async getBalance(publicKey: string) {
+    return this.clientService.getBalance(publicKey);
   }
 
   async withdrawFromWallet({
     publicKey,
     secretKey,
+    toAddress,
+    amount,
   }: {
     publicKey: string;
     secretKey: string;
+    toAddress: string;
+    amount?: number;
   }) {
-    return this.clientService.withdrawFromWallet({ publicKey, secretKey });
+    return this.clientService.withdrawFromWallet({
+      publicKey,
+      secretKey,
+      toAddress,
+      amount,
+    });
   }
 
   async getTransactionInfo(transactionHash: string) {

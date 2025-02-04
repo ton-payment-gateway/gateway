@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -35,6 +36,7 @@ export class Merchant extends BaseEntity {
     type: 'varchar',
     nullable: false,
   })
+  @Index('uq_merchant_address', { unique: true })
   address: string;
 
   @Column({

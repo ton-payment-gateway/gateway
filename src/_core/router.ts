@@ -22,9 +22,8 @@ export const ROUTER = {
   },
   API_KEY: {
     CREATE: '',
-    GET: '',
+    GET_ALL: '',
     GET_ONE: ':id',
-    UPDATE: ':id',
     DELETE: ':id',
   },
   ADDRESS: {

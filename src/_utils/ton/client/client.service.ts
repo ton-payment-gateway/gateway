@@ -4,6 +4,7 @@ import { mnemonicNew, mnemonicToPrivateKey } from 'ton-crypto';
 import { BaseLogger } from 'src/_core/logger/base-logger/base-logger';
 import { Injectable } from '@nestjs/common';
 import configuration from 'src/_core/config/configuration';
+import { constants } from 'src/_core/config/constants';
 import { exponentToNumber } from 'src/_utils/helpers';
 
 const config = configuration();
@@ -40,13 +41,7 @@ export class ClientService {
     return res;
   }
 
-  async withdrawFromWallet({
-    publicKey,
-    secretKey,
-  }: {
-    publicKey: string;
-    secretKey: string;
-  }) {
+  async getBalance(publicKey: string) {
     const wallet = WalletContractV4.create({
       workchain: 0,
       publicKey: Buffer.from(publicKey, 'hex'),
@@ -56,11 +51,36 @@ export class ClientService {
 
     const balance = await contract.getBalance();
 
+    return Number(balance) / 10 ** 9;
+  }
+
+  async withdrawFromWallet({
+    publicKey,
+    secretKey,
+    toAddress,
+    amount,
+  }: {
+    publicKey: string;
+    secretKey: string;
+    toAddress: string;
+    amount?: number;
+  }) {
+    const wallet = WalletContractV4.create({
+      workchain: 0,
+      publicKey: Buffer.from(publicKey, 'hex'),
+    });
+
+    const contract = this.client.open(wallet);
+
+    const balance = await this.getBalance(publicKey);
+
     const withdrawableBalance = Number(
-      (Number(balance) / 10 ** 9 - 0.05).toFixed(5),
+      (balance - constants.transactionFee).toFixed(9),
     );
 
-    if (Number(withdrawableBalance) < 0) return;
+    if (Number(withdrawableBalance) < (amount || 0)) {
+      throw new Error('Insufficient balance');
+    }
 
     const seqno = await contract.getSeqno();
 
@@ -69,8 +89,8 @@ export class ClientService {
       secretKey: Buffer.from(secretKey, 'hex'),
       messages: [
         internal({
-          value: String(exponentToNumber(withdrawableBalance)),
-          to: config.ton.walletAddress,
+          value: String(exponentToNumber(amount || withdrawableBalance)),
+          to: toAddress,
           bounce: false,
         }),
       ],
