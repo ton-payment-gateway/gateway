@@ -9,6 +9,7 @@ import { LoggerModule } from '../_core/logger/logger.module';
 import { MerchantModule } from 'src/merchant/merchant.module';
 import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
+import { TransactionModule } from 'src/transaction/transaction.module';
 import { TypeOrmModule } from '../_core/typeOrm/typeorm.module';
 import { UserModule } from 'src/user/user.module';
 import { WebhookModule } from 'src/webhook/webhook.module';
@@ -29,6 +30,7 @@ import { WebhookModule } from 'src/webhook/webhook.module';
     MerchantModule,
     ApiKeyModule,
     AddressModule,
+    TransactionModule,
     WebhookModule,
   ],
   controllers: [AppController],

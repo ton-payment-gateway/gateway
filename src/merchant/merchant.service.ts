@@ -10,6 +10,7 @@ import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { TonService } from 'src/_utils/ton/ton.service';
 import { UpdateMerchantDto } from './dto/update-merchant.dto';
 import { NotFoundException } from 'src/_core/exception/exception';
+import { TransactionService } from 'src/transaction/transaction.service';
 
 @Injectable()
 export class MerchantService {
@@ -18,6 +19,8 @@ export class MerchantService {
     private readonly merchantRepo: Repository<Merchant>,
 
     private readonly tonService: TonService,
+
+    private readonly transactionService: TransactionService,
   ) {}
 
   async findOne(options: FindOneOptions<Merchant>) {
@@ -83,7 +86,7 @@ export class MerchantService {
   }
 
   async getOne(merchant: Merchant) {
-    const balance = await this.tonService.getBalance(merchant.keys.publicKey);
+    const balance = await this.transactionService.getBalance(merchant.id);
 
     return merchantFormatter(merchant, balance);
   }
@@ -116,7 +119,7 @@ export class MerchantService {
 
     const res = await this.save(merchant);
 
-    const balance = await this.tonService.getBalance(merchant.keys.publicKey);
+    const balance = await this.transactionService.getBalance(merchant.id);
 
     return merchantFormatter(res, balance);
   }

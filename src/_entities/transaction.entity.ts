@@ -34,6 +34,7 @@ export class Transaction extends BaseEntity {
     type: 'numeric',
     precision: 78,
     scale: 9,
+    name: 'service_fee',
   })
   serviceFee: string;
 
