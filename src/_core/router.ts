@@ -15,6 +15,8 @@ export const ROUTER = {
     GET_ONE: ':id',
     UPDATE: ':id',
     DELETE: ':id',
+    COLLECT_ADDRESSES: ':id/collect-addresses',
+    WITHDRAW: ':id/withdraw',
   },
   TRANSACTION: {
     GET_ALL: '',

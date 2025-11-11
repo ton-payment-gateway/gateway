@@ -46,6 +46,13 @@ export class Transaction extends BaseEntity {
   metadata: string;
 
   @Column({
+    type: 'boolean',
+    default: false,
+    name: 'is_direct_deposit',
+  })
+  isDirectDeposit: boolean;
+
+  @Column({
     name: 'merchant_id',
     type: 'uuid',
   })

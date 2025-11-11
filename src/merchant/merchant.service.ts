@@ -9,14 +9,20 @@ import { ResGetMerchantsDto } from './dto/get-merchants.dto';
 import { CreateMerchantDto } from './dto/create-merchant.dto';
 import { TonService } from 'src/_utils/ton/ton.service';
 import { UpdateMerchantDto } from './dto/update-merchant.dto';
-import { NotFoundException } from 'src/_core/exception/exception';
+import { BadException, NotFoundException } from 'src/_core/exception/exception';
 import { TransactionService } from 'src/transaction/transaction.service';
+import { randomBytes } from 'crypto';
+import { WithdrawMerchantDto } from './dto/withdraw-merchant.dto';
+import { constants } from 'src/_core/config/constants';
+import { BaseLogger } from 'src/_core/logger/base-logger/base-logger';
 
 @Injectable()
 export class MerchantService {
   constructor(
     @InjectRepository(Merchant)
     private readonly merchantRepo: Repository<Merchant>,
+
+    private readonly logger: BaseLogger,
 
     private readonly tonService: TonService,
 
@@ -77,7 +83,7 @@ export class MerchantService {
     });
 
     return {
-      result: data[0].map(merchantFormatter),
+      result: data[0].map((merchant) => merchantFormatter(merchant)),
       pagination: {
         page,
         total: data[1],
@@ -88,7 +94,11 @@ export class MerchantService {
   async getOne(merchant: Merchant) {
     const balance = await this.transactionService.getBalance(merchant.id);
 
-    return merchantFormatter(merchant, balance);
+    const withdrawableBalance = await this.getWithdrawableBalance(
+      merchant.keys.publicKey,
+    );
+
+    return merchantFormatter(merchant, balance, withdrawableBalance);
   }
 
   async createMerchant(userId: string, body: CreateMerchantDto) {
@@ -98,6 +108,7 @@ export class MerchantService {
       ...body,
       userId,
       address: wallet.readableAddress,
+      secretKey: randomBytes(32).toString('base64'),
       keys: {
         publicKey: wallet.publicKey,
         secretKey: wallet.secretKey,
@@ -110,7 +121,7 @@ export class MerchantService {
 
     const res = await this.save(data);
 
-    return merchantFormatter(res, 0);
+    return merchantFormatter(res, 0, 0);
   }
 
   async update(merchant: Merchant, body: UpdateMerchantDto) {
@@ -121,7 +132,11 @@ export class MerchantService {
 
     const balance = await this.transactionService.getBalance(merchant.id);
 
-    return merchantFormatter(res, balance);
+    const withdrawableBalance = await this.getWithdrawableBalance(
+      merchant.keys.publicKey,
+    );
+
+    return merchantFormatter(res, balance, withdrawableBalance);
   }
 
   async deleteMerchant(merchant: Merchant) {
@@ -141,11 +156,78 @@ export class MerchantService {
     }
 
     for (const address of merchant.addresses) {
-      await this.tonService.withdrawFromWallet({
-        publicKey: address.keys.publicKey,
-        secretKey: address.keys.secretKey,
-        toAddress: merchant.address,
-      });
+      await this.tonService
+        .withdrawFromWallet({
+          publicKey: address.keys.publicKey,
+          secretKey: address.keys.secretKey,
+          toAddress: merchant.address,
+        })
+        .then(() => {
+          this.logger.log(
+            `Successfully withdrew from address ${address.address} to merchant ${merchant.address}`,
+          );
+        })
+        .catch((error) => {
+          this.logger.error(
+            `Failed to withdraw from address ${address.address}:`,
+            error,
+          );
+        });
     }
+  }
+
+  async withdrawMerchant(merchantId: string, body: WithdrawMerchantDto) {
+    const merchant = await this.findOne({
+      where: {
+        id: merchantId,
+      },
+    });
+
+    if (!merchant) {
+      throw new NotFoundException('Merchant not found');
+    }
+
+    const balance = await this.transactionService.getBalance(merchant.id);
+
+    if (body.amount > balance) {
+      throw new BadException('Insufficient balance');
+    }
+
+    const withdrawableBalance = await this.getWithdrawableBalance(
+      merchant.keys.publicKey,
+    );
+
+    if (body.amount > withdrawableBalance) {
+      throw new BadException(
+        `Amount exceeds withdrawable balance. Max withdrawable amount is ${withdrawableBalance}`,
+      );
+    }
+
+    await this.transactionService.save(
+      this.transactionService.create({
+        amount: String(-body.amount),
+        serviceFee: String(0),
+        hash: `withdraw-${Date.now()}-${Math.random()}`,
+        metadata: `Withdrawal to address ${body.address}`,
+        merchantId: merchant.id,
+      }),
+    );
+
+    await this.tonService.withdrawFromWallet({
+      publicKey: merchant.keys.publicKey,
+      secretKey: merchant.keys.secretKey,
+      toAddress: body.address,
+      amount: body.amount,
+    });
+  }
+
+  async getWithdrawableBalance(publicKey: string) {
+    const accountBalance = await this.tonService.getBalance(publicKey);
+
+    const withdrawableBalance = Number(
+      (accountBalance - constants.transactionFee).toFixed(9),
+    );
+
+    return withdrawableBalance > 0 ? withdrawableBalance : 0;
   }
 }

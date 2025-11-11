@@ -2,6 +2,7 @@ import { AuthDto, ResAuthDto } from './dto/auth.dto';
 import { ConflictException, Injectable } from '@nestjs/common';
 
 import { BcryptService } from 'src/_utils/bcrypt/bcrypt.service';
+import { GeolocationService } from 'src/_utils/geolocation/geolocation.service';
 import { ResGetSessionDto } from './dto/session.dto';
 import { TokenService } from '../_utils/token/token.service';
 import { UnauthorizedException } from 'src/_core/exception/exception';
@@ -14,6 +15,7 @@ export class AuthService {
     private readonly tokenService: TokenService,
     private readonly bcryptService: BcryptService,
     private readonly userService: UserService,
+    private readonly geolocationService: GeolocationService,
   ) {}
 
   async login(body: AuthDto): Promise<ResAuthDto> {
@@ -48,7 +50,7 @@ export class AuthService {
     };
   }
 
-  async register(body: AuthDto): Promise<ResAuthDto> {
+  async register(body: AuthDto, ipAddress: string): Promise<ResAuthDto> {
     const existedUser = await this.userService.findOne({
       where: { username: body.username },
     });
@@ -59,9 +61,12 @@ export class AuthService {
 
     const password = await this.bcryptService.hashData(body.password);
 
+    const country = await this.geolocationService.getUserCountry(ipAddress);
+
     const newUser = this.userService.create({
       username: body.username,
       password,
+      country,
     });
 
     const savedUser = await this.userService.save(newUser);

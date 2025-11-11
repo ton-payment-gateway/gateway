@@ -14,11 +14,14 @@ export const userFormatter = (data: User): ResGetSessionDto => ({
 export const merchantFormatter = (
   data: Merchant,
   balance?: number,
+  withdrawableBalance?: number,
 ): ResMerchantDto => ({
   id: data.id,
   name: data.name,
   webhookUrl: data.webhookUrl,
   balance: balance || 0,
+  withdrawableBalance: withdrawableBalance || 0,
+  secretKey: data.secretKey,
   createdAt: data.createdAt,
 });
 

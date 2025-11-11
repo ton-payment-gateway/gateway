@@ -16,6 +16,7 @@ import { Address } from './address.entity';
 import { ApiKey } from './api-key.entity';
 import { Transaction } from './transaction.entity';
 import { User } from './user.entity';
+import { encrypt } from '../../src/_utils/helpers';
 
 @Entity({
   name: 'merchants',
@@ -31,6 +32,9 @@ export class Merchant extends BaseEntity {
 
   @Column('varchar', { nullable: true, name: 'webhook_url' })
   webhookUrl: string;
+
+  @Column('varchar', { name: 'secret_key', transformer: encrypt })
+  secretKey: string;
 
   @Column({
     type: 'varchar',

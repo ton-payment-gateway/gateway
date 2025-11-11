@@ -26,6 +26,18 @@ export class ResMerchantDto {
   balance: number;
 
   @ApiProperty({
+    description: 'Withdrawable balance',
+    type: Number,
+  })
+  withdrawableBalance: number;
+
+  @ApiProperty({
+    description: 'Secret key',
+    type: String,
+  })
+  secretKey: string;
+
+  @ApiProperty({
     description: 'Created at',
     type: Date,
   })

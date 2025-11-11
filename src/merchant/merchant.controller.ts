@@ -26,6 +26,7 @@ import { MerchantOwnerGuard } from './guards/merchant-owner.guard';
 import { MerchantData } from 'src/_utils/decorators/merchant-data.decorator';
 import { Merchant } from 'src/_entities/merchant.entity';
 import { IdDto } from 'src/_utils/dto/id.dto';
+import { WithdrawMerchantDto } from './dto/withdraw-merchant.dto';
 
 @ApiResponse({
   status: 400,
@@ -121,5 +122,34 @@ export class MerchantController {
     @Param() _: IdDto,
   ): Promise<void> {
     return this.merchantService.deleteMerchant(merchant);
+  }
+
+  @Post(ROUTER.MERCHANT.WITHDRAW)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Withdraw from merchant success')
+  async withdraw(
+    @Body() body: WithdrawMerchantDto,
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+  ): Promise<void> {
+    return this.merchantService.withdrawMerchant(merchant.id, body);
+  }
+
+  @Post(ROUTER.MERCHANT.COLLECT_ADDRESSES)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Collect addresses for merchant success')
+  async collectAddresses(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+  ): Promise<void> {
+    return this.merchantService.withdrawAddressesToMerchant(merchant.id);
   }
 }

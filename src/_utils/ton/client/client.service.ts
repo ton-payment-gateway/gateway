@@ -22,8 +22,8 @@ export class ClientService {
     const mnemonics = await mnemonicNew();
     const keyPair = await mnemonicToPrivateKey(mnemonics);
 
-    const publicKey = Buffer.from(keyPair.publicKey).toString('hex');
-    const secretKey = Buffer.from(keyPair.secretKey).toString('hex');
+    const publicKey = keyPair.publicKey.toString('hex');
+    const secretKey = keyPair.secretKey.toString('hex');
 
     const wallet = WalletContractV4.create({
       workchain: 0,
