@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import { ETransactionStatus } from '../../src/transaction/types';
 import { Merchant } from './merchant.entity';
 
 @Entity({
@@ -51,6 +52,22 @@ export class Transaction extends BaseEntity {
     name: 'is_direct_deposit',
   })
   isDirectDeposit: boolean;
+
+  @Column({
+    type: 'varchar',
+    nullable: false,
+    name: 'status',
+    default: ETransactionStatus.COMPLETED,
+  })
+  status: ETransactionStatus;
+
+  @Column({
+    type: 'integer',
+    nullable: false,
+    name: 'confirmation_time',
+    default: 100,
+  })
+  confirmationTime!: number;
 
   @Column({
     name: 'merchant_id',

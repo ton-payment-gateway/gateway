@@ -24,6 +24,8 @@ export class WebhookService {
   async receiveNotification(body: WebhookDto) {
     this.logger.log(body, 'WebhookService.receiveNotification');
 
+    const start = new Date().getTime();
+
     if (body.event_type !== 'account_tx') {
       return {
         status: 'error',
@@ -107,6 +109,7 @@ export class WebhookService {
     });
 
     if (address) {
+      transactionEntity.confirmationTime = new Date().getTime() - start;
       transactionEntity.merchantId = address.merchantId;
       transactionEntity.metadata = address.metadata || '';
       transactionEntity.isDirectDeposit = true;
