@@ -1,6 +1,6 @@
 import { ApiProperty, IntersectionType } from '@nestjs/swagger';
 
-import { AnalyticsPeriodDto } from 'src/_utils/dto/anlytics-period.dto';
+import { AnalyticsPeriodDto } from 'src/_utils/dto/analytics-period.dto';
 
 export class TopDto {
   @ApiProperty({

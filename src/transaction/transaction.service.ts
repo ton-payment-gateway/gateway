@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from 'src/_entities/transaction.entity';
-import { IAnalyticsPeriod } from 'src/_utils/dto/anlytics-period.dto';
+import { IAnalyticsPeriod } from 'src/_utils/dto/analytics-period.dto';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
 import { ETransactionStatus } from './types';
 import { transactionFormatter } from 'src/_utils/formatter';

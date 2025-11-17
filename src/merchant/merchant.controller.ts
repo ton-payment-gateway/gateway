@@ -27,7 +27,7 @@ import { MerchantData } from 'src/_utils/decorators/merchant-data.decorator';
 import { Merchant } from 'src/_entities/merchant.entity';
 import { IdDto } from 'src/_utils/dto/id.dto';
 import { WithdrawMerchantDto } from './dto/withdraw-merchant.dto';
-import { AnalyticsPeriodDto } from 'src/_utils/dto/anlytics-period.dto';
+import { AnalyticsPeriodDto } from 'src/_utils/dto/analytics-period.dto';
 import {
   AverageConfirmationTimeDto,
   AverageOrderValueDto,
