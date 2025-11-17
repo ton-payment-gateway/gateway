@@ -25,6 +25,18 @@ export default (): ApplicationConfigurations => {
       accessTtl: process.env.APP_AUTH_ACCESS_EXPIRATION_TIME,
       refreshSecret: process.env.APP_AUTH_REFRESH_SECRET,
       refreshTtl: process.env.APP_AUTH_REFRESH_EXPIRATION_TIME,
+      admin: {
+        username: process.env.APP_AUTH_ADMIN_USERNAME,
+        password: process.env.APP_AUTH_ADMIN_PASSWORD,
+        access: {
+          secret: process.env.APP_AUTH_ADMIN_ACCESS_SECRET,
+          ttl: process.env.APP_AUTH_ADMIN_ACCESS_EXPIRATION_TIME,
+        },
+        refresh: {
+          secret: process.env.APP_AUTH_ADMIN_REFRESH_SECRET,
+          ttl: process.env.APP_AUTH_ADMIN_REFRESH_EXPIRATION_TIME,
+        },
+      },
     },
     encryption: {
       iv: process.env.APP_ENCRYPTION_IV,
@@ -83,6 +95,12 @@ const validSchema = Joi.object({
   APP_AUTH_ACCESS_EXPIRATION_TIME: Joi.string().required(),
   APP_AUTH_REFRESH_SECRET: Joi.string().required(),
   APP_AUTH_REFRESH_EXPIRATION_TIME: Joi.string().required(),
+  APP_AUTH_ADMIN_USERNAME: Joi.string().required(),
+  APP_AUTH_ADMIN_PASSWORD: Joi.string().required(),
+  APP_AUTH_ADMIN_ACCESS_SECRET: Joi.string().required(),
+  APP_AUTH_ADMIN_ACCESS_EXPIRATION_TIME: Joi.string().required(),
+  APP_AUTH_ADMIN_REFRESH_SECRET: Joi.string().required(),
+  APP_AUTH_ADMIN_REFRESH_EXPIRATION_TIME: Joi.string().required(),
 
   // ENCRYPTION
   APP_ENCRYPTION_IV: Joi.string().required(),

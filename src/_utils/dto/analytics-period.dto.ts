@@ -12,7 +12,7 @@ export class AnalyticsPeriodDto implements IAnalyticsPeriod {
   @ApiProperty({
     type: String,
     format: 'date-time',
-    example: '2025-11-16T00:00:00.000Z',
+    example: '2025-11-01T00:00:00.000Z',
   })
   @IsNotEmpty()
   @Type(() => Date)

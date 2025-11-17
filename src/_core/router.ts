@@ -2,6 +2,7 @@ export const ROUTER = {
   BASE: 'api',
   ADMIN: {
     LOGIN: 'login',
+    REFRESH: 'refresh',
     ANALYTICS: {
       GMV: 'gmv',
       GMV_CHART: 'gmv/chart',

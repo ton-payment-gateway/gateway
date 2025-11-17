@@ -1272,7 +1272,7 @@ export class TransactionService {
   async getNewMerchants(period: IAnalyticsPeriod) {
     const res: { count: string } = await this.transactionRepo
       .createQueryBuilder('transaction')
-      .select('COUNT(DISTINCT merchant_id)', 'count')
+      .select('COUNT(DISTINCT first_transactions.merchant_id)', 'count')
       .from((qb) => {
         return qb
           .select('transaction.merchant_id', 'merchant_id')

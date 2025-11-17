@@ -265,7 +265,7 @@ export class NewMerchantsCohortDto {
     type: String,
     description: 'Cohort Month',
   })
-  cohortMonth: Date;
+  cohortMonth: string;
 
   @ApiProperty({
     type: Number,
@@ -275,9 +275,9 @@ export class NewMerchantsCohortDto {
 
   @ApiProperty({
     type: Number,
-    description: 'Number of New Merchants',
+    description: 'Number of Active Merchants',
   })
-  newMerchants: number;
+  activeMerchants: number;
 }
 
 export class MerchantRetentionDto {

@@ -1,4 +1,5 @@
 import { AddressModule } from 'src/address/address.module';
+import { AdminModule } from 'src/admin/admin.module';
 import { ApiKeyModule } from 'src/api-key/api-key.module';
 import { AppController } from './app.controller';
 import { AuthModule } from 'src/auth/auth.module';
@@ -25,6 +26,7 @@ import { WebhookModule } from 'src/webhook/webhook.module';
     // MODULE
     JobsModule,
     HealthModule,
+    AdminModule,
     AuthModule,
     UserModule,
     MerchantModule,

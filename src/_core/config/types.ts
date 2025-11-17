@@ -17,6 +17,18 @@ export interface ApplicationConfigurations {
     accessTtl: string;
     refreshSecret: string;
     refreshTtl: string;
+    admin: {
+      username: string;
+      password: string;
+      access: {
+        secret: string;
+        ttl: string;
+      };
+      refresh: {
+        secret: string;
+        ttl: string;
+      };
+    };
   };
   encryption: {
     iv: string;
