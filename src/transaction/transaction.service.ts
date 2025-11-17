@@ -93,13 +93,13 @@ export class TransactionService {
       query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
     }
 
-    const res: { date: string; gmv: string }[] = await query
+    const res: { date: Date; gmv: string }[] = await query
       .groupBy("DATE_TRUNC('day', transaction.created_at)")
       .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
       .getRawMany();
 
     return res.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       gmv: Number(item.gmv),
     }));
   }
@@ -144,13 +144,13 @@ export class TransactionService {
       query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
     }
 
-    const res: { date: string; service_fee: string }[] = await query
+    const res: { date: Date; service_fee: string }[] = await query
       .groupBy("DATE_TRUNC('day', transaction.created_at)")
       .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
       .getRawMany();
 
     return res.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       serviceFee: Number(item.service_fee),
     }));
   }
@@ -225,7 +225,7 @@ export class TransactionService {
       });
     }
 
-    const totalTransactions: { date: string; count: string }[] =
+    const totalTransactions: { date: Date; count: string }[] =
       await totalTransactionsQuery
         .groupBy("DATE_TRUNC('day', transaction.created_at)")
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
@@ -250,24 +250,27 @@ export class TransactionService {
       );
     }
 
-    const completedTransactions: { date: string; count: string }[] =
+    const completedTransactions: { date: Date; count: string }[] =
       await completedTransactionsQuery
         .groupBy("DATE_TRUNC('day', transaction.created_at)")
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
     const completedMap = new Map(
-      completedTransactions.map((item) => [item.date, Number(item.count)]),
+      completedTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
     );
 
     return totalTransactions.map((item) => {
-      const completedCount = completedMap.get(item.date) || 0;
+      const completedCount = completedMap.get(item.date.toISOString()) || 0;
       const totalCount = Number(item.count);
       const conversionRate =
         totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
 
       return {
-        date: item.date,
+        date: item.date.toISOString(),
         conversionRate,
       };
     });
@@ -317,13 +320,13 @@ export class TransactionService {
       query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
     }
 
-    const res: { date: string; avg_confirmation_time: string }[] = await query
+    const res: { date: Date; avg_confirmation_time: string }[] = await query
       .groupBy("DATE_TRUNC('day', transaction.created_at)")
       .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
       .getRawMany();
 
     return res.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       averageConfirmationTime: Number(item.avg_confirmation_time),
     }));
   }
@@ -378,13 +381,13 @@ export class TransactionService {
       query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
     }
 
-    const res: { date: string; p95_confirmation_time: string }[] = await query
+    const res: { date: Date; p95_confirmation_time: string }[] = await query
       .groupBy("DATE_TRUNC('day', transaction.created_at)")
       .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
       .getRawMany();
 
     return res.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       p95ConfirmationTime: Number(item.p95_confirmation_time),
     }));
   }
@@ -470,7 +473,7 @@ export class TransactionService {
       });
     }
 
-    const totalTransactions: { date: string; count: string }[] =
+    const totalTransactions: { date: Date; count: string }[] =
       await totalTransactionsQuery
         .groupBy("DATE_TRUNC('day', transaction.created_at)")
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
@@ -498,24 +501,28 @@ export class TransactionService {
       );
     }
 
-    const directDepositTransactions: { date: string; count: string }[] =
+    const directDepositTransactions: { date: Date; count: string }[] =
       await directDepositTransactionsQuery
         .groupBy("DATE_TRUNC('day', transaction.created_at)")
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
     const directDepositMap = new Map(
-      directDepositTransactions.map((item) => [item.date, Number(item.count)]),
+      directDepositTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
     );
 
     return totalTransactions.map((item) => {
-      const directDepositCount = directDepositMap.get(item.date) || 0;
+      const directDepositCount =
+        directDepositMap.get(item.date.toISOString()) || 0;
       const totalCount = Number(item.count);
       const directDepositShare =
         totalCount === 0 ? 0 : (directDepositCount / totalCount) * 100;
 
       return {
-        date: item.date,
+        date: item.date.toISOString(),
         directDepositShare,
       };
     });
@@ -542,7 +549,7 @@ export class TransactionService {
     merchantId: string,
     period: IAnalyticsPeriod,
   ) {
-    const res: { date: string; avg_order_value: string }[] =
+    const res: { date: Date; avg_order_value: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
         .select("DATE_TRUNC('day', transaction.created_at)", 'date')
@@ -560,7 +567,7 @@ export class TransactionService {
         .getRawMany();
 
     return res.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       averageOrderValue: Number(item.avg_order_value),
     }));
   }
@@ -579,38 +586,37 @@ export class TransactionService {
       })
       .getRawOne();
 
+    console.log(totalCustomers);
+
     const repeatCustomers: { count: string } = await this.transactionRepo
       .createQueryBuilder('transaction')
-      .select('COUNT(*)', 'count')
-      .from((qb) => {
-        return qb
-          .select('transaction.metadata')
-          .from(Transaction, 'transaction')
-          .where('transaction.merchant_id = :merchantId', { merchantId })
-          .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
-            startDate: period.startDate,
-            endDate: period.endDate,
-          })
-          .andWhere('transaction.status = :status', {
-            status: ETransactionStatus.COMPLETED,
-          })
-          .groupBy('transaction.metadata')
-          .having('COUNT(*) > 1');
-      }, 'repeat_customers')
+      .select('COUNT(DISTINCT transaction.metadata)', 'count')
+      .where('transaction.merchant_id = :merchantId', { merchantId })
+      .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
+        startDate: period.startDate,
+        endDate: period.endDate,
+      })
+      .andWhere('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      })
+      .groupBy('transaction.metadata')
+      .having('COUNT(*) > 1')
       .getRawOne();
 
     if (Number(totalCustomers.count) === 0) {
       return 0;
     }
 
-    return (Number(repeatCustomers.count) / Number(totalCustomers.count)) * 100;
+    return (
+      (Number(repeatCustomers?.count || 0) / Number(totalCustomers.count)) * 100
+    );
   }
 
   async getRepeatCustomerRateChartData(
     merchantId: string,
     period: IAnalyticsPeriod,
   ) {
-    const totalCustomers: { date: string; count: string }[] =
+    const totalCustomers: { date: Date; count: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
         .select("DATE_TRUNC('day', transaction.created_at)", 'date')
@@ -627,54 +633,58 @@ export class TransactionService {
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
-    const repeatCustomers: { date: string; count: string }[] =
+    const repeatCustomers: { date: Date; count: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
-        .select("DATE_TRUNC('day', repeat_customers.created_at)", 'date')
-        .addSelect('COUNT(*)', 'count')
-        .from((qb) => {
-          return qb
-            .select("DATE_TRUNC('day', transaction.created_at)", 'created_at')
-            .addSelect('transaction.metadata', 'metadata')
-            .from(Transaction, 'transaction')
-            .where('transaction.merchant_id = :merchantId', { merchantId })
-            .andWhere(
-              'transaction.created_at BETWEEN :startDate AND :endDate',
-              {
-                startDate: period.startDate,
-                endDate: period.endDate,
-              },
-            )
-            .andWhere('transaction.status = :status', {
-              status: ETransactionStatus.COMPLETED,
-            })
-            .groupBy("DATE_TRUNC('day', transaction.created_at)")
-            .addGroupBy('transaction.metadata')
-            .having('COUNT(*) > 1');
-        }, 'repeat_customers')
-        .groupBy("DATE_TRUNC('day', repeat_customers.created_at)")
-        .orderBy("DATE_TRUNC('day', repeat_customers.created_at)", 'ASC')
+        .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+        .addSelect('COUNT(DISTINCT transaction.metadata)', 'count')
+        .where('transaction.merchant_id = :merchantId', { merchantId })
+        .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
+          startDate: period.startDate,
+          endDate: period.endDate,
+        })
+        .andWhere('transaction.status = :status', {
+          status: ETransactionStatus.COMPLETED,
+        })
+        .andWhere((qb) => {
+          const subQuery = qb
+            .subQuery()
+            .select('sub.metadata')
+            .from(Transaction, 'sub')
+            .where('sub.merchant_id = :merchantId')
+            .andWhere('sub.created_at BETWEEN :startDate AND :endDate')
+            .andWhere('sub.status = :status')
+            .groupBy('sub.metadata')
+            .having('COUNT(*) > 1')
+            .getQuery();
+          return 'transaction.metadata IN ' + subQuery;
+        })
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
     const repeatCustomersMap = new Map(
-      repeatCustomers.map((item) => [item.date, Number(item.count)]),
+      repeatCustomers.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
     );
 
     return totalCustomers.map((item) => {
-      const repeatCount = repeatCustomersMap.get(item.date) || 0;
+      const repeatCount = repeatCustomersMap.get(item.date.toISOString()) || 0;
       const totalCount = Number(item.count);
       const repeatCustomerRate =
         totalCount === 0 ? 0 : (repeatCount / totalCount) * 100;
 
       return {
-        date: item.date,
+        date: item.date.toISOString(),
         repeatCustomerRate,
       };
     });
   }
 
   async getFunnelChartData(merchantId: string, period: IAnalyticsPeriod) {
-    const totalTransactions: { date: string; count: string }[] =
+    const totalTransactions: { date: Date; count: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
         .select("DATE_TRUNC('day', transaction.created_at)", 'date')
@@ -688,7 +698,7 @@ export class TransactionService {
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
-    const completedTransactions: { date: string; count: string }[] =
+    const completedTransactions: { date: Date; count: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
         .select("DATE_TRUNC('day', transaction.created_at)", 'date')
@@ -705,7 +715,7 @@ export class TransactionService {
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
-    const failedTransactions: { date: string; count: string }[] =
+    const failedTransactions: { date: Date; count: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
         .select("DATE_TRUNC('day', transaction.created_at)", 'date')
@@ -723,19 +733,27 @@ export class TransactionService {
         .getRawMany();
 
     const completedMap = new Map(
-      completedTransactions.map((item) => [item.date, Number(item.count)]),
+      completedTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
     );
     const failedMap = new Map(
-      failedTransactions.map((item) => [item.date, Number(item.count)]),
+      failedTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
     );
 
     return totalTransactions.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       totalTransactions: Number(item.count),
-      completedTransactions: completedMap.get(item.date) || 0,
-      failedTransactions: failedMap.get(item.date) || 0,
+      completedTransactions: completedMap.get(item.date.toISOString()) || 0,
+      failedTransactions: failedMap.get(item.date.toISOString()) || 0,
       crRate:
-        ((completedMap.get(item.date) || 0) / Number(item.count)) * 100 || 0,
+        ((completedMap.get(item.date.toISOString()) || 0) /
+          Number(item.count)) *
+          100 || 0,
     }));
   }
 
@@ -1017,7 +1035,7 @@ export class TransactionService {
       });
     }
 
-    const totalTransactions: { date: string; count: string }[] =
+    const totalTransactions: { date: Date; count: string }[] =
       await totalTransactionsQuery
         .groupBy("DATE_TRUNC('day', transaction.created_at)")
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
@@ -1042,24 +1060,27 @@ export class TransactionService {
       );
     }
 
-    const failedTransactions: { date: string; count: string }[] =
+    const failedTransactions: { date: Date; count: string }[] =
       await failedTransactionsQuery
         .groupBy("DATE_TRUNC('day', transaction.created_at)")
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
     const failedMap = new Map(
-      failedTransactions.map((item) => [item.date, Number(item.count)]),
+      failedTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
     );
 
     return totalTransactions.map((item) => {
-      const failedCount = failedMap.get(item.date) || 0;
+      const failedCount = failedMap.get(item.date.toISOString()) || 0;
       const totalCount = Number(item.count);
       const failureShare =
         totalCount === 0 ? 0 : (failedCount / totalCount) * 100;
 
       return {
-        date: item.date,
+        date: item.date.toISOString(),
         failureShare,
       };
     });
@@ -1132,13 +1153,13 @@ export class TransactionService {
       query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
     }
 
-    const historicalData: { date: string; gmv: string }[] = await query
+    const historicalData: { date: Date; gmv: string }[] = await query
       .groupBy("DATE_TRUNC('day', transaction.created_at)")
       .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
       .getRawMany();
 
     const data = historicalData.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       gmv: Number(item.gmv),
     }));
 
@@ -1153,19 +1174,32 @@ export class TransactionService {
     const windowSize = Math.min(7, data.length);
     const forecast: { date: string; forecastGmv: number }[] = [];
 
-    if (data.length >= windowSize) {
-      const movingAvg =
-        data.slice(-windowSize).reduce((sum, item) => sum + item.gmv, 0) /
-        windowSize;
+    if (data.length >= 2) {
+      // Calculate linear trend from historical data
+      const recentData = data.slice(-windowSize);
+      const n = recentData.length;
+
+      // Simple linear regression: y = mx + b
+      const sumX = recentData.reduce((sum, _, idx) => sum + idx, 0);
+      const sumY = recentData.reduce((sum, item) => sum + item.gmv, 0);
+      const sumXY = recentData.reduce(
+        (sum, item, idx) => sum + idx * item.gmv,
+        0,
+      );
+      const sumX2 = recentData.reduce((sum, _, idx) => sum + idx * idx, 0);
+
+      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+      const intercept = (sumY - slope * sumX) / n;
 
       // Generate forecast for next 7 days
       const lastDate = new Date(data[data.length - 1].date);
       for (let i = 1; i <= 7; i++) {
         const forecastDate = new Date(lastDate);
         forecastDate.setDate(forecastDate.getDate() + i);
+        const forecastValue = Math.max(0, slope * (n + i - 1) + intercept);
         forecast.push({
           date: forecastDate.toISOString(),
-          forecastGmv: movingAvg,
+          forecastGmv: forecastValue,
         });
       }
     }
@@ -1240,14 +1274,13 @@ export class TransactionService {
       .andWhere('transaction.status = :status', {
         status: ETransactionStatus.COMPLETED,
       })
-      .andWhere('transaction.merchant_id IS NOT NULL')
       .getRawOne();
 
     return Number(res.count);
   }
 
   async getActiveMerchantsChartData(period: IAnalyticsPeriod) {
-    const res: { date: string; count: string }[] = await this.transactionRepo
+    const res: { date: Date; count: string }[] = await this.transactionRepo
       .createQueryBuilder('transaction')
       .select("DATE_TRUNC('month', transaction.created_at)", 'date')
       .addSelect('COUNT(DISTINCT transaction.merchant_id)', 'count')
@@ -1264,7 +1297,7 @@ export class TransactionService {
       .getRawMany();
 
     return res.map((item) => ({
-      date: item.date,
+      date: item.date.toISOString(),
       activeMerchants: Number(item.count),
     }));
   }
