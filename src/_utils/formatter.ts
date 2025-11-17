@@ -4,6 +4,8 @@ import { ResApiKeyDto } from 'src/api-key/dto/api-key.dto';
 import { ResCreateAddressDto } from 'src/address/dto/create-address.dto';
 import { ResGetSessionDto } from 'src/auth/dto/session.dto';
 import { ResMerchantDto } from 'src/merchant/dto/merchant.dto';
+import { Transaction } from 'src/_entities/transaction.entity';
+import { TransactionDto } from 'src/transaction/dto/transaction.dto';
 import { User } from 'src/_entities/user.entity';
 
 export const userFormatter = (data: User): ResGetSessionDto => ({
@@ -35,4 +37,14 @@ export const apiKeyFormatter = (data: any): ResApiKeyDto => ({
 export const addressFormatter = (data: Address): ResCreateAddressDto => ({
   address: data.address,
   metadata: data.metadata,
+});
+
+export const transactionFormatter = (data: Transaction): TransactionDto => ({
+  id: data.id,
+  amount: Number(data.amount),
+  serviceFee: Number(data.serviceFee),
+  hash: data.hash,
+  confirmationTime: data.confirmationTime,
+  merchantId: data.merchantId,
+  createdAt: data.createdAt,
 });

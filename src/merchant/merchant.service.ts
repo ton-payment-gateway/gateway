@@ -230,4 +230,11 @@ export class MerchantService {
 
     return withdrawableBalance > 0 ? withdrawableBalance : 0;
   }
+
+  async callTransactionServiceMethod<K extends keyof TransactionService>(
+    method: K,
+    ...args: Parameters<TransactionService[K]>
+  ): Promise<ReturnType<TransactionService[K]>> {
+    return (this.transactionService[method] as any)(...args);
+  }
 }
