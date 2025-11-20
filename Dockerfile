@@ -1,7 +1,7 @@
 # Dockerfile
 
 # Use an existing node alpine image as a base image.
-FROM node:alpine
+FROM node:20-alpine
 
 # Install Python and other necessary tools
 RUN apk add --no-cache python3 make g++
