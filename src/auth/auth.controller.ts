@@ -4,7 +4,14 @@ import {
   ApiOperation,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { Post, Body, Controller, UseGuards, Headers } from '@nestjs/common';
+import {
+  Post,
+  Body,
+  Controller,
+  UseGuards,
+  Headers,
+  Get,
+} from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 
@@ -79,7 +86,7 @@ export class AuthController {
     return this.authService.refresh(data.id);
   }
 
-  @Post(ROUTER.AUTH.SESSION)
+  @Get(ROUTER.AUTH.SESSION)
   @ApiResponse({
     status: 200,
     type: ResGetSessionDto,
