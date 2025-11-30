@@ -3,14 +3,29 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Transaction } from 'src/_entities/transaction.entity';
 import { IAnalyticsPeriod } from 'src/_utils/dto/analytics-period.dto';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import { ETransactionStatus } from './types';
+import { EForecastModel, ETransactionStatus, IForecastResponse } from './types';
 import { transactionFormatter } from 'src/_utils/formatter';
+import { HttpService } from '@nestjs/axios';
+import {
+  ActiveMerchantsDto,
+  AverageConfirmationTimeDto,
+  AverageOrderValueDto,
+  CRDto,
+  DirectDepositShareDto,
+  FailuresShareDto,
+  GMVDto,
+  P95ConfirmationTimeDto,
+  RepeatCustomerRateDto,
+  ServiceFeeDto,
+} from './dto/analytics.dto';
 
 @Injectable()
 export class TransactionService {
   constructor(
     @InjectRepository(Transaction)
     private readonly transactionRepo: Repository<Transaction>,
+
+    private readonly httpService: HttpService,
   ) {}
 
   async findOne(options: FindOneOptions<Transaction>) {
@@ -104,6 +119,48 @@ export class TransactionService {
     }));
   }
 
+  async getGrossMarketValueForecast(
+    merchantId: string | null,
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<GMVDto[]> {
+    const query = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('SUM(transaction.amount)', 'gmv')
+      .where('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      });
+
+    if (merchantId) {
+      query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
+    }
+
+    const res: { date: Date; gmv: string }[] = await query
+      .groupBy("DATE_TRUNC('day', transaction.created_at)")
+      .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+      .getRawMany();
+
+    const actual = res.map((item) => ({
+      date: item.date.toISOString().slice(0, 10), // "YYYY-MM-DD"
+      value: Number(item.gmv),
+    }));
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      gmv: item.value,
+    }));
+  }
+
   async getServiceFee(merchantId: string | null, period: IAnalyticsPeriod) {
     const query = this.transactionRepo
       .createQueryBuilder('transaction')
@@ -152,6 +209,48 @@ export class TransactionService {
     return res.map((item) => ({
       date: item.date.toISOString(),
       serviceFee: Number(item.service_fee),
+    }));
+  }
+
+  async getServiceFeeForecast(
+    merchantId: string | null,
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<ServiceFeeDto[]> {
+    const query = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('SUM(transaction.service_fee)', 'service_fee')
+      .where('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      });
+
+    if (merchantId) {
+      query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
+    }
+
+    const res: { date: Date; service_fee: string }[] = await query
+      .groupBy("DATE_TRUNC('day', transaction.created_at)")
+      .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+      .getRawMany();
+
+    const actual = res.map((item) => ({
+      date: item.date.toISOString().slice(0, 10), // "YYYY-MM-DD"
+      value: Number(item.service_fee),
+    }));
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      serviceFee: item.value,
     }));
   }
 
@@ -276,6 +375,83 @@ export class TransactionService {
     });
   }
 
+  async getConversionRateForecast(
+    merchantId: string | null,
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<CRDto[]> {
+    const totalTransactionsQuery = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('COUNT(*)', 'count');
+
+    if (merchantId) {
+      totalTransactionsQuery.where('transaction.merchant_id = :merchantId', {
+        merchantId,
+      });
+    }
+
+    const totalTransactions: { date: Date; count: string }[] =
+      await totalTransactionsQuery
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+        .getRawMany();
+
+    const completedTransactionsQuery = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      });
+
+    if (merchantId) {
+      completedTransactionsQuery.andWhere(
+        'transaction.merchant_id = :merchantId',
+        { merchantId },
+      );
+    }
+
+    const completedTransactions: { date: Date; count: string }[] =
+      await completedTransactionsQuery
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+        .getRawMany();
+
+    const completedMap = new Map(
+      completedTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
+    );
+
+    const actual = totalTransactions.map((item) => {
+      const completedCount = completedMap.get(item.date.toISOString()) || 0;
+      const totalCount = Number(item.count);
+      const conversionRate =
+        totalCount === 0 ? 0 : (completedCount / totalCount) * 100;
+
+      return {
+        date: item.date.toISOString().slice(0, 10),
+        value: conversionRate,
+      };
+    });
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      conversionRate: item.value,
+    }));
+  }
+
   async getAverageConfirmationTime(
     merchantId: string | null,
     period: IAnalyticsPeriod,
@@ -328,6 +504,48 @@ export class TransactionService {
     return res.map((item) => ({
       date: item.date.toISOString(),
       averageConfirmationTime: Number(item.avg_confirmation_time),
+    }));
+  }
+
+  async getAverageConfirmationTimeForecast(
+    merchantId: string | null,
+    model: string,
+    horizon: number,
+  ): Promise<AverageConfirmationTimeDto[]> {
+    const query = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('AVG(transaction.confirmation_time)', 'avg_confirmation_time')
+      .where('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      });
+
+    if (merchantId) {
+      query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
+    }
+
+    const res: { date: Date; avg_confirmation_time: string }[] = await query
+      .groupBy("DATE_TRUNC('day', transaction.created_at)")
+      .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+      .getRawMany();
+
+    const actual = res.map((item) => ({
+      date: item.date.toISOString().slice(0, 10),
+      value: Number(item.avg_confirmation_time),
+    }));
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      averageConfirmationTime: item.value,
     }));
   }
 
@@ -389,6 +607,51 @@ export class TransactionService {
     return res.map((item) => ({
       date: item.date.toISOString(),
       p95ConfirmationTime: Number(item.p95_confirmation_time),
+    }));
+  }
+
+  async getP95ConfirmationTimeForecast(
+    merchantId: string | null,
+    model: string,
+    horizon: number,
+  ): Promise<P95ConfirmationTimeDto[]> {
+    const query = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect(
+        'PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY transaction.confirmation_time)',
+        'p95_confirmation_time',
+      )
+      .where('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      });
+
+    if (merchantId) {
+      query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
+    }
+
+    const res: { date: Date; p95_confirmation_time: string }[] = await query
+      .groupBy("DATE_TRUNC('day', transaction.created_at)")
+      .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+      .getRawMany();
+
+    const actual = res.map((item) => ({
+      date: item.date.toISOString().slice(0, 10),
+      value: Number(item.p95_confirmation_time),
+    }));
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      p95ConfirmationTime: item.value,
     }));
   }
 
@@ -528,6 +791,84 @@ export class TransactionService {
     });
   }
 
+  async getDirectDepositShareForecast(
+    merchantId: string | null,
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<DirectDepositShareDto[]> {
+    const totalTransactionsQuery = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('COUNT(*)', 'count');
+
+    if (merchantId) {
+      totalTransactionsQuery.where('transaction.merchant_id = :merchantId', {
+        merchantId,
+      });
+    }
+
+    const totalTransactions: { date: Date; count: string }[] =
+      await totalTransactionsQuery
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+        .getRawMany();
+
+    const directDepositTransactionsQuery = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where('transaction.is_direct_deposit = :isDirectDeposit', {
+        isDirectDeposit: true,
+      });
+
+    if (merchantId) {
+      directDepositTransactionsQuery.andWhere(
+        'transaction.merchant_id = :merchantId',
+        { merchantId },
+      );
+    }
+
+    const directDepositTransactions: { date: Date; count: string }[] =
+      await directDepositTransactionsQuery
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+        .getRawMany();
+
+    const directDepositMap = new Map(
+      directDepositTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
+    );
+
+    const actual = totalTransactions.map((item) => {
+      const directDepositCount =
+        directDepositMap.get(item.date.toISOString()) || 0;
+      const totalCount = Number(item.count);
+      const directDepositShare =
+        totalCount === 0 ? 0 : (directDepositCount / totalCount) * 100;
+
+      return {
+        date: item.date.toISOString().slice(0, 10),
+        value: directDepositShare,
+      };
+    });
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      directDepositShare: item.value,
+    }));
+  }
+
   async getAverageOrderValue(merchantId: string, period: IAnalyticsPeriod) {
     const res: { avg_order_value: string } = await this.transactionRepo
       .createQueryBuilder('transaction')
@@ -572,6 +913,44 @@ export class TransactionService {
     }));
   }
 
+  async getAverageOrderValueForecast(
+    merchantId: string,
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<AverageOrderValueDto[]> {
+    const res: { date: Date; avg_order_value: string }[] =
+      await this.transactionRepo
+        .createQueryBuilder('transaction')
+        .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+        .addSelect('AVG(transaction.amount)', 'avg_order_value')
+        .where('transaction.merchant_id = :merchantId', { merchantId })
+        .andWhere('transaction.status = :status', {
+          status: ETransactionStatus.COMPLETED,
+        })
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+        .getRawMany();
+
+    const actual = res.map((item) => ({
+      date: item.date.toISOString().slice(0, 10),
+      value: Number(item.avg_order_value),
+    }));
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      averageOrderValue: item.value,
+    }));
+  }
+
   async getRepeatCustomerRate(merchantId: string, period: IAnalyticsPeriod) {
     const totalCustomers: { count: string } = await this.transactionRepo
       .createQueryBuilder('transaction')
@@ -585,8 +964,6 @@ export class TransactionService {
         status: ETransactionStatus.COMPLETED,
       })
       .getRawOne();
-
-    console.log(totalCustomers);
 
     const repeatCustomers: { count: string } = await this.transactionRepo
       .createQueryBuilder('transaction')
@@ -683,31 +1060,17 @@ export class TransactionService {
     });
   }
 
-  async getFunnelChartData(merchantId: string, period: IAnalyticsPeriod) {
-    const totalTransactions: { date: Date; count: string }[] =
+  async getRepeatCustomerRateForecast(
+    merchantId: string,
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<RepeatCustomerRateDto[]> {
+    const totalCustomers: { date: Date; count: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
         .select("DATE_TRUNC('day', transaction.created_at)", 'date')
-        .addSelect('COUNT(*)', 'count')
+        .addSelect('COUNT(DISTINCT transaction.metadata)', 'count')
         .where('transaction.merchant_id = :merchantId', { merchantId })
-        .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
-          startDate: period.startDate,
-          endDate: period.endDate,
-        })
-        .groupBy("DATE_TRUNC('day', transaction.created_at)")
-        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
-        .getRawMany();
-
-    const completedTransactions: { date: Date; count: string }[] =
-      await this.transactionRepo
-        .createQueryBuilder('transaction')
-        .select("DATE_TRUNC('day', transaction.created_at)", 'date')
-        .addSelect('COUNT(*)', 'count')
-        .where('transaction.merchant_id = :merchantId', { merchantId })
-        .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
-          startDate: period.startDate,
-          endDate: period.endDate,
-        })
         .andWhere('transaction.status = :status', {
           status: ETransactionStatus.COMPLETED,
         })
@@ -715,46 +1078,112 @@ export class TransactionService {
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
-    const failedTransactions: { date: Date; count: string }[] =
+    const repeatCustomers: { date: Date; count: string }[] =
       await this.transactionRepo
         .createQueryBuilder('transaction')
         .select("DATE_TRUNC('day', transaction.created_at)", 'date')
-        .addSelect('COUNT(*)', 'count')
+        .addSelect('COUNT(DISTINCT transaction.metadata)', 'count')
         .where('transaction.merchant_id = :merchantId', { merchantId })
-        .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
-          startDate: period.startDate,
-          endDate: period.endDate,
-        })
         .andWhere('transaction.status = :status', {
-          status: ETransactionStatus.FAILED,
+          status: ETransactionStatus.COMPLETED,
+        })
+        .andWhere((qb) => {
+          const subQuery = qb
+            .subQuery()
+            .select('sub.metadata')
+            .from(Transaction, 'sub')
+            .where('sub.merchant_id = :merchantId')
+            .andWhere('sub.status = :status')
+            .groupBy('sub.metadata')
+            .having('COUNT(*) > 1')
+            .getQuery();
+          return 'transaction.metadata IN ' + subQuery;
         })
         .groupBy("DATE_TRUNC('day', transaction.created_at)")
         .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
         .getRawMany();
 
-    const completedMap = new Map(
-      completedTransactions.map((item) => [
-        item.date.toISOString(),
-        Number(item.count),
-      ]),
-    );
-    const failedMap = new Map(
-      failedTransactions.map((item) => [
+    const repeatCustomersMap = new Map(
+      repeatCustomers.map((item) => [
         item.date.toISOString(),
         Number(item.count),
       ]),
     );
 
-    return totalTransactions.map((item) => ({
-      date: item.date.toISOString(),
-      totalTransactions: Number(item.count),
-      completedTransactions: completedMap.get(item.date.toISOString()) || 0,
-      failedTransactions: failedMap.get(item.date.toISOString()) || 0,
-      crRate:
-        ((completedMap.get(item.date.toISOString()) || 0) /
-          Number(item.count)) *
-          100 || 0,
+    const actual = totalCustomers.map((item) => {
+      const repeatCount = repeatCustomersMap.get(item.date.toISOString()) || 0;
+      const totalCount = Number(item.count);
+      const repeatCustomerRate =
+        totalCount === 0 ? 0 : (repeatCount / totalCount) * 100;
+
+      return {
+        date: item.date.toISOString().slice(0, 10),
+        value: repeatCustomerRate,
+      };
+    });
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      repeatCustomerRate: item.value,
     }));
+  }
+
+  async getFunnelChartData(merchantId: string, period: IAnalyticsPeriod) {
+    const totalTransactions: { count: string } = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select('COUNT(*)', 'count')
+      .where('transaction.merchant_id = :merchantId', { merchantId })
+      .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
+        startDate: period.startDate,
+        endDate: period.endDate,
+      })
+      .getRawOne();
+
+    const completedTransactions: { count: string } = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select('COUNT(*)', 'count')
+      .where('transaction.merchant_id = :merchantId', { merchantId })
+      .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
+        startDate: period.startDate,
+        endDate: period.endDate,
+      })
+      .andWhere('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      })
+      .getRawOne();
+
+    const failedTransactions: { count: string } = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select('COUNT(*)', 'count')
+      .where('transaction.merchant_id = :merchantId', { merchantId })
+      .andWhere('transaction.created_at BETWEEN :startDate AND :endDate', {
+        startDate: period.startDate,
+        endDate: period.endDate,
+      })
+      .andWhere('transaction.status = :status', {
+        status: ETransactionStatus.FAILED,
+      })
+      .getRawOne();
+
+    const total = Number(totalTransactions.count);
+    const completed = Number(completedTransactions.count);
+    const failed = Number(failedTransactions.count);
+
+    return {
+      totalTransactions: total,
+      completedTransactions: completed,
+      failedTransactions: failed,
+      crRate: total === 0 ? 0 : (completed / total) * 100,
+    };
   }
 
   async getHourlyHeatmap(merchantId: string, period: IAnalyticsPeriod) {
@@ -1086,6 +1515,83 @@ export class TransactionService {
     });
   }
 
+  async getFailureShareForecast(
+    merchantId: string | null,
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<FailuresShareDto[]> {
+    const totalTransactionsQuery = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('COUNT(*)', 'count');
+
+    if (merchantId) {
+      totalTransactionsQuery.where('transaction.merchant_id = :merchantId', {
+        merchantId,
+      });
+    }
+
+    const totalTransactions: { date: Date; count: string }[] =
+      await totalTransactionsQuery
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+        .getRawMany();
+
+    const failedTransactionsQuery = this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
+      .addSelect('COUNT(*)', 'count')
+      .where('transaction.status = :status', {
+        status: ETransactionStatus.FAILED,
+      });
+
+    if (merchantId) {
+      failedTransactionsQuery.andWhere(
+        'transaction.merchant_id = :merchantId',
+        { merchantId },
+      );
+    }
+
+    const failedTransactions: { date: Date; count: string }[] =
+      await failedTransactionsQuery
+        .groupBy("DATE_TRUNC('day', transaction.created_at)")
+        .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
+        .getRawMany();
+
+    const failedMap = new Map(
+      failedTransactions.map((item) => [
+        item.date.toISOString(),
+        Number(item.count),
+      ]),
+    );
+
+    const actual = totalTransactions.map((item) => {
+      const failedCount = failedMap.get(item.date.toISOString()) || 0;
+      const totalCount = Number(item.count);
+      const failureShare =
+        totalCount === 0 ? 0 : (failedCount / totalCount) * 100;
+
+      return {
+        date: item.date.toISOString().slice(0, 10),
+        value: failureShare,
+      };
+    });
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      failureShare: item.value,
+    }));
+  }
+
   async getSystemAlerts() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -1127,140 +1633,7 @@ export class TransactionService {
       );
     }
 
-    // Check Uptime Score < 97%
-    const uptime = systemCR * 100;
-    if (uptime < 97) {
-      alerts.push(`System uptime score is below 97%: ${uptime.toFixed(2)}%`);
-    }
-
     return alerts;
-  }
-
-  async getForecastGMV(merchantId: string | null, period: IAnalyticsPeriod) {
-    const query = this.transactionRepo
-      .createQueryBuilder('transaction')
-      .select("DATE_TRUNC('day', transaction.created_at)", 'date')
-      .addSelect('SUM(transaction.amount)', 'gmv')
-      .where('transaction.created_at BETWEEN :startDate AND :endDate', {
-        startDate: period.startDate,
-        endDate: period.endDate,
-      })
-      .andWhere('transaction.status = :status', {
-        status: ETransactionStatus.COMPLETED,
-      });
-
-    if (merchantId) {
-      query.andWhere('transaction.merchant_id = :merchantId', { merchantId });
-    }
-
-    const historicalData: { date: Date; gmv: string }[] = await query
-      .groupBy("DATE_TRUNC('day', transaction.created_at)")
-      .orderBy("DATE_TRUNC('day', transaction.created_at)", 'ASC')
-      .getRawMany();
-
-    const data = historicalData.map((item) => ({
-      date: item.date.toISOString(),
-      gmv: Number(item.gmv),
-    }));
-
-    if (data.length === 0) {
-      return {
-        historical: [],
-        forecast: [],
-      };
-    }
-
-    // Calculate moving average for forecast
-    const windowSize = Math.min(7, data.length);
-    const forecast: { date: string; forecastGmv: number }[] = [];
-
-    if (data.length >= 2) {
-      // Calculate linear trend from historical data
-      const recentData = data.slice(-windowSize);
-      const n = recentData.length;
-
-      // Simple linear regression: y = mx + b
-      const sumX = recentData.reduce((sum, _, idx) => sum + idx, 0);
-      const sumY = recentData.reduce((sum, item) => sum + item.gmv, 0);
-      const sumXY = recentData.reduce(
-        (sum, item, idx) => sum + idx * item.gmv,
-        0,
-      );
-      const sumX2 = recentData.reduce((sum, _, idx) => sum + idx * idx, 0);
-
-      const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-      const intercept = (sumY - slope * sumX) / n;
-
-      // Generate forecast for next 7 days
-      const lastDate = new Date(data[data.length - 1].date);
-      for (let i = 1; i <= 7; i++) {
-        const forecastDate = new Date(lastDate);
-        forecastDate.setDate(forecastDate.getDate() + i);
-        const forecastValue = Math.max(0, slope * (n + i - 1) + intercept);
-        forecast.push({
-          date: forecastDate.toISOString(),
-          forecastGmv: forecastValue,
-        });
-      }
-    }
-
-    return {
-      historical: data,
-      forecast,
-    };
-  }
-
-  async getMerchantClustering(period: IAnalyticsPeriod) {
-    // Get merchant metrics
-    const merchants = await this.transactionRepo
-      .createQueryBuilder('transaction')
-      .select('transaction.merchant_id', 'merchantId')
-      .addSelect('AVG(transaction.amount)', 'aov')
-      .addSelect(
-        'COUNT(CASE WHEN transaction.status = :completed THEN 1 END)::float / COUNT(*)::float * 100',
-        'cr',
-      )
-      .addSelect(
-        'COUNT(CASE WHEN transaction.is_direct_deposit = true AND transaction.status = :completed THEN 1 END)::float / COUNT(CASE WHEN transaction.status = :completed THEN 1 END)::float * 100',
-        'directDepositShare',
-      )
-      .addSelect('AVG(transaction.confirmation_time)', 'avgConfirmTime')
-      .where('transaction.created_at BETWEEN :startDate AND :endDate', {
-        startDate: period.startDate,
-        endDate: period.endDate,
-      })
-      .andWhere('transaction.merchant_id IS NOT NULL')
-      .setParameter('completed', ETransactionStatus.COMPLETED)
-      .groupBy('transaction.merchant_id')
-      .having('COUNT(*) > 10')
-      .getRawMany();
-
-    if (merchants.length === 0) {
-      return [];
-    }
-
-    // Prepare features for clustering
-    const features = merchants.map((m) => [
-      Number(m.aov) || 0,
-      Number(m.cr) || 0,
-      Number(m.directDepositShare) || 0,
-      Number(m.avgConfirmTime) || 0,
-    ]);
-
-    // Normalize features
-    const normalized = this.normalizeFeatures(features);
-
-    // K-means clustering (K=3)
-    const clusters = this.kMeans(normalized, 3);
-
-    return merchants.map((merchant, idx) => ({
-      merchantId: merchant.merchantId,
-      aov: Number(merchant.aov) || 0,
-      cr: Number(merchant.cr) || 0,
-      directDepositShare: Number(merchant.directDepositShare) || 0,
-      avgConfirmTime: Number(merchant.avgConfirmTime) || 0,
-      cluster: clusters[idx],
-    }));
   }
 
   async getActiveMerchants(period: IAnalyticsPeriod) {
@@ -1299,6 +1672,42 @@ export class TransactionService {
     return res.map((item) => ({
       date: item.date.toISOString(),
       activeMerchants: Number(item.count),
+    }));
+  }
+
+  async getActiveMerchantsForecast(
+    model: EForecastModel,
+    horizon: number,
+  ): Promise<ActiveMerchantsDto[]> {
+    const res: { date: Date; count: string }[] = await this.transactionRepo
+      .createQueryBuilder('transaction')
+      .select("DATE_TRUNC('month', transaction.created_at)", 'date')
+      .addSelect('COUNT(DISTINCT transaction.merchant_id)', 'count')
+      .where('transaction.status = :status', {
+        status: ETransactionStatus.COMPLETED,
+      })
+      .andWhere('transaction.merchant_id IS NOT NULL')
+      .groupBy("DATE_TRUNC('month', transaction.created_at)")
+      .orderBy("DATE_TRUNC('month', transaction.created_at)", 'ASC')
+      .getRawMany();
+
+    const actual = res.map((item) => ({
+      date: item.date.toISOString().slice(0, 10),
+      value: Number(item.count),
+    }));
+
+    const forecast = await this.httpService.axiosRef.post<IForecastResponse>(
+      '/forecast',
+      {
+        points: actual,
+        model,
+        horizon,
+      },
+    );
+
+    return forecast.data.forecast.map((item) => ({
+      date: new Date(item.date).toISOString(),
+      activeMerchants: item.value,
     }));
   }
 
@@ -1562,95 +1971,5 @@ export class TransactionService {
       .sort((a, b) => a.cr - b.cr || b.failureShare - a.failureShare);
 
     return hotspots;
-  }
-
-  private normalizeFeatures(features: number[][]): number[][] {
-    const numFeatures = features[0].length;
-    const mins = new Array(numFeatures).fill(Infinity);
-    const maxs = new Array(numFeatures).fill(-Infinity);
-
-    // Find min and max for each feature
-    features.forEach((row) => {
-      row.forEach((val, idx) => {
-        mins[idx] = Math.min(mins[idx], val);
-        maxs[idx] = Math.max(maxs[idx], val);
-      });
-    });
-
-    // Normalize
-    return features.map((row) =>
-      row.map((val, idx) => {
-        const range = maxs[idx] - mins[idx];
-        return range === 0 ? 0 : (val - mins[idx]) / range;
-      }),
-    );
-  }
-
-  private kMeans(data: number[][], k: number, maxIterations = 100): number[] {
-    const n = data.length;
-    const dim = data[0].length;
-
-    // Initialize centroids randomly
-    const centroids: number[][] = [];
-    const usedIndices = new Set<number>();
-    while (centroids.length < k) {
-      const idx = Math.floor(Math.random() * n);
-      if (!usedIndices.has(idx)) {
-        centroids.push([...data[idx]]);
-        usedIndices.add(idx);
-      }
-    }
-
-    let assignments = new Array(n).fill(0);
-    let iterations = 0;
-
-    while (iterations < maxIterations) {
-      // Assign points to nearest centroid
-      const newAssignments = data.map((point) => {
-        let minDist = Infinity;
-        let cluster = 0;
-        centroids.forEach((centroid, idx) => {
-          const dist = this.euclideanDistance(point, centroid);
-          if (dist < minDist) {
-            minDist = dist;
-            cluster = idx;
-          }
-        });
-        return cluster;
-      });
-
-      // Check convergence
-      if (
-        assignments.every((val, idx) => val === newAssignments[idx]) ||
-        iterations === maxIterations - 1
-      ) {
-        break;
-      }
-
-      assignments = newAssignments;
-
-      // Update centroids
-      for (let i = 0; i < k; i++) {
-        const clusterPoints = data.filter((_, idx) => assignments[idx] === i);
-        if (clusterPoints.length > 0) {
-          centroids[i] = new Array(dim).fill(0).map((_, d) => {
-            return (
-              clusterPoints.reduce((sum, point) => sum + point[d], 0) /
-              clusterPoints.length
-            );
-          });
-        }
-      }
-
-      iterations++;
-    }
-
-    return assignments;
-  }
-
-  private euclideanDistance(a: number[], b: number[]): number {
-    return Math.sqrt(
-      a.reduce((sum, val, idx) => sum + Math.pow(val - b[idx], 2), 0),
-    );
   }
 }

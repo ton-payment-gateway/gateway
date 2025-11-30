@@ -34,6 +34,24 @@ export interface ApplicationConfigurations {
     iv: string;
     key: string;
   };
+  ton: {
+    blockchain: {
+      apiUrl: string;
+      apiKey: string;
+    };
+    webhook: {
+      apiUrl: string;
+      apiKey: string;
+    };
+    client: {
+      rpc: string;
+      rpcApiKey: string;
+    };
+    walletAddress: string;
+  };
+  forecast: {
+    url: string;
+  };
   sentry: {
     dns: string;
     isEnable: boolean;

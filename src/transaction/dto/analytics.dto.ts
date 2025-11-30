@@ -114,12 +114,6 @@ export class RepeatCustomerRateDto {
 
 export class FunnelChartDto {
   @ApiProperty({
-    type: String,
-    description: 'Date',
-  })
-  date: string;
-
-  @ApiProperty({
     type: Number,
     description: 'Total Transactions',
   })

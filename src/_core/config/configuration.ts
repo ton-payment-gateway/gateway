@@ -57,6 +57,9 @@ export default (): ApplicationConfigurations => {
       },
       walletAddress: process.env.APP_TON_WALLET_ADDRESS,
     },
+    forecast: {
+      url: process.env.APP_FORECAST_URL,
+    },
     sentry: {
       dns: process.env.APP_SENTRY_DSN,
       isEnable: process.env.APP_FEATURE_SENTRY
@@ -110,6 +113,9 @@ const validSchema = Joi.object({
   APP_TON_API_KEY: Joi.string().required(),
   APP_TON_RPC_API_KEY: Joi.string().required(),
   APP_TON_WALLET_ADDRESS: Joi.string().required(),
+
+  // FORECAST
+  APP_FORECAST_URL: Joi.string().required(),
 });
 
 const validate = (data: Record<string, unknown>) => {

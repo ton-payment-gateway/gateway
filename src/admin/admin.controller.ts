@@ -12,7 +12,10 @@ import { LoginDto } from './dto/login.dto';
 import { ResExceptionDto } from 'src/_core/exception/dto/exception.dto';
 import { AdminService } from './admin.service';
 import { HttpAuthGuard } from 'src/auth/guards/http-auth.guard';
-import { AnalyticsPeriodDto } from 'src/_utils/dto/analytics-period.dto';
+import {
+  AnalyticsPeriodDto,
+  ForecastDto,
+} from 'src/_utils/dto/analytics-period.dto';
 import {
   ActiveMerchantsDto,
   AverageConfirmationTimeDto,
@@ -20,7 +23,6 @@ import {
   DirectDepositShareDto,
   FailuresShareDto,
   GMVDto,
-  GMVForecastDto,
   HotspotsDto,
   MerchantRetentionDto,
   NewMerchantsCohortDto,
@@ -29,6 +31,9 @@ import {
 } from 'src/transaction/dto/analytics.dto';
 import { TransactionDto } from 'src/transaction/dto/transaction.dto';
 import { TopRequestDto } from 'src/transaction/dto/top.dto';
+import { AuthData } from 'src/_utils/decorators/auth-data.decorator';
+import { SessionData } from 'src/auth/types';
+import { ResGetSessionDto } from 'src/auth/dto/session.dto';
 
 @ApiResponse({
   status: 400,
@@ -60,6 +65,20 @@ export class AdminController {
   @ResponseMessage('Admin login success')
   async login(@Body() body: LoginDto): Promise<ResAuthDto> {
     return this.adminService.login(body);
+  }
+
+  @Get(ROUTER.ADMIN.SESSION)
+  @ApiResponse({
+    status: 200,
+    type: ResGetSessionDto,
+    description: 'Success',
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Admin Session' })
+  @ResponseMessage('Admin session success')
+  async session(@AuthData() session: SessionData): Promise<ResGetSessionDto> {
+    return session;
   }
 
   @Post(ROUTER.ADMIN.REFRESH)
@@ -118,19 +137,19 @@ export class AdminController {
   @ApiResponse({
     status: 200,
     description: 'Success',
-    type: GMVForecastDto,
+    isArray: true,
+    type: GMVDto,
   })
   @UseGuards(HttpAuthGuard({ isAdmin: true }))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get GMV Forecast' })
   @ResponseMessage('Get GMV forecast success')
-  async getGmvForecast(
-    @Query() period: AnalyticsPeriodDto,
-  ): Promise<GMVForecastDto> {
+  async getGmvForecast(@Query() forecast: ForecastDto): Promise<GMVDto[]> {
     return this.adminService.callTransactionServiceMethod(
-      'getForecastGMV',
+      'getGrossMarketValueForecast',
       null,
-      period,
+      forecast.model,
+      forecast.horizon,
     );
   }
 
@@ -173,6 +192,28 @@ export class AdminController {
     );
   }
 
+  @Get(ROUTER.ADMIN.ANALYTICS.SERVICE_FEE_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: ServiceFeeDto,
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Service Fee Forecast' })
+  @ResponseMessage('Get service fee forecast success')
+  async getServiceFeeForecast(
+    @Query() forecast: ForecastDto,
+  ): Promise<ServiceFeeDto[]> {
+    return this.adminService.callTransactionServiceMethod(
+      'getServiceFeeForecast',
+      null,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.ADMIN.ANALYTICS.CR)
   @ApiResponse({
     status: 200,
@@ -207,6 +248,26 @@ export class AdminController {
       'getConversionRateChartData',
       null,
       period,
+    );
+  }
+
+  @Get(ROUTER.ADMIN.ANALYTICS.CR_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: CRDto,
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get CR Forecast' })
+  @ResponseMessage('Get CR forecast success')
+  async getCRForecast(@Query() forecast: ForecastDto): Promise<CRDto[]> {
+    return this.adminService.callTransactionServiceMethod(
+      'getConversionRateForecast',
+      null,
+      forecast.model,
+      forecast.horizon,
     );
   }
 
@@ -251,6 +312,28 @@ export class AdminController {
     );
   }
 
+  @Get(ROUTER.ADMIN.ANALYTICS.AVERAGE_CONFIRMATION_TIME_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: AverageConfirmationTimeDto,
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Average Confirmation Time Forecast' })
+  @ResponseMessage('Get Average Confirmation Time forecast success')
+  async getAverageConfirmationTimeForecast(
+    @Query() forecast: ForecastDto,
+  ): Promise<AverageConfirmationTimeDto[]> {
+    return this.adminService.callTransactionServiceMethod(
+      'getAverageConfirmationTimeForecast',
+      null,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.ADMIN.ANALYTICS.P95_CONFIRMATION_TIME)
   @ApiResponse({
     status: 200,
@@ -292,6 +375,28 @@ export class AdminController {
     );
   }
 
+  @Get(ROUTER.ADMIN.ANALYTICS.P95_CONFIRMATION_TIME_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: P95ConfirmationTimeDto,
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get P95 Confirmation Time Forecast' })
+  @ResponseMessage('Get P95 Confirmation Time forecast success')
+  async getP95ConfirmationTimeForecast(
+    @Query() forecast: ForecastDto,
+  ): Promise<P95ConfirmationTimeDto[]> {
+    return this.adminService.callTransactionServiceMethod(
+      'getP95ConfirmationTimeForecast',
+      null,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.ADMIN.ANALYTICS.DIRECT_DEPOSIT_SHARE)
   @ApiResponse({
     status: 200,
@@ -330,6 +435,28 @@ export class AdminController {
       'getDirectDepositShareChartData',
       null,
       period,
+    );
+  }
+
+  @Get(ROUTER.ADMIN.ANALYTICS.DIRECT_DEPOSIT_SHARE_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: DirectDepositShareDto,
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Direct Deposit Share Forecast' })
+  @ResponseMessage('Get Direct Deposit Share forecast success')
+  async getDirectDepositShareForecast(
+    @Query() forecast: ForecastDto,
+  ): Promise<DirectDepositShareDto[]> {
+    return this.adminService.callTransactionServiceMethod(
+      'getDirectDepositShareForecast',
+      null,
+      forecast.model,
+      forecast.horizon,
     );
   }
 
@@ -397,6 +524,28 @@ export class AdminController {
     );
   }
 
+  @Get(ROUTER.ADMIN.ANALYTICS.FAILURE_SHARE_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: FailuresShareDto,
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Failure Share Forecast' })
+  @ResponseMessage('Get Failure Share forecast success')
+  async getFailureShareForecast(
+    @Query() forecast: ForecastDto,
+  ): Promise<FailuresShareDto[]> {
+    return this.adminService.callTransactionServiceMethod(
+      'getFailureShareForecast',
+      null,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.ADMIN.ANALYTICS.ALERTS)
   @ApiResponse({
     status: 200,
@@ -448,6 +597,27 @@ export class AdminController {
     return this.adminService.callTransactionServiceMethod(
       'getActiveMerchantsChartData',
       period,
+    );
+  }
+
+  @Get(ROUTER.ADMIN.ANALYTICS.ACTIVE_MERCHANTS_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: ActiveMerchantsDto,
+  })
+  @UseGuards(HttpAuthGuard({ isAdmin: true }))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get Active Merchants Forecast' })
+  @ResponseMessage('Get Active Merchants forecast success')
+  async getActiveMerchantsForecast(
+    @Query() forecast: ForecastDto,
+  ): Promise<ActiveMerchantsDto[]> {
+    return this.adminService.callTransactionServiceMethod(
+      'getActiveMerchantsForecast',
+      forecast.model,
+      forecast.horizon,
     );
   }
 

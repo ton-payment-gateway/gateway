@@ -27,7 +27,10 @@ import { MerchantData } from 'src/_utils/decorators/merchant-data.decorator';
 import { Merchant } from 'src/_entities/merchant.entity';
 import { IdDto } from 'src/_utils/dto/id.dto';
 import { WithdrawMerchantDto } from './dto/withdraw-merchant.dto';
-import { AnalyticsPeriodDto } from 'src/_utils/dto/analytics-period.dto';
+import {
+  AnalyticsPeriodDto,
+  ForecastDto,
+} from 'src/_utils/dto/analytics-period.dto';
 import {
   AverageConfirmationTimeDto,
   AverageOrderValueDto,
@@ -36,7 +39,6 @@ import {
   FailuresShareDto,
   FunnelChartDto,
   GMVDto,
-  GMVForecastDto,
   HourlyHeatmapDto,
   P95ConfirmationTimeDto,
   RepeatCustomerRateDto,
@@ -216,19 +218,21 @@ export class MerchantController {
   @ApiResponse({
     status: 200,
     description: 'Success',
-    type: GMVForecastDto,
+    isArray: true,
+    type: GMVDto,
   })
   @UseGuards(MerchantOwnerGuard)
   @ResponseMessage('Get merchant GMV forecast success')
   async getGMVForecast(
     @MerchantData() merchant: Merchant,
     @Param() _: IdDto,
-    @Query() period: AnalyticsPeriodDto,
-  ): Promise<GMVForecastDto> {
+    @Query() forecast: ForecastDto,
+  ): Promise<GMVDto[]> {
     return this.merchantService.callTransactionServiceMethod(
-      'getForecastGMV',
+      'getGrossMarketValueForecast',
       merchant.id,
-      period,
+      forecast.model,
+      forecast.horizon,
     );
   }
 
@@ -273,6 +277,28 @@ export class MerchantController {
     );
   }
 
+  @Get(ROUTER.MERCHANT.ANALYTICS.SERVICE_FEE_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: ServiceFeeDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant service fee forecast success')
+  async getServiceFeeForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<ServiceFeeDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getServiceFeeForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.MERCHANT.ANALYTICS.CR)
   @ApiResponse({
     status: 200,
@@ -311,6 +337,28 @@ export class MerchantController {
       'getConversionRateChartData',
       merchant.id,
       period,
+    );
+  }
+
+  @Get(ROUTER.MERCHANT.ANALYTICS.CR_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: CRDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant conversion rate forecast success')
+  async getConversionRateForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<CRDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getConversionRateForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
     );
   }
 
@@ -355,6 +403,28 @@ export class MerchantController {
     );
   }
 
+  @Get(ROUTER.MERCHANT.ANALYTICS.AVERAGE_CONFIRMATION_TIME_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: AverageConfirmationTimeDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant average confirmation time forecast success')
+  async getAverageConfirmationTimeForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<AverageConfirmationTimeDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getAverageConfirmationTimeForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.MERCHANT.ANALYTICS.P95_CONFIRMATION_TIME)
   @ApiResponse({
     status: 200,
@@ -393,6 +463,28 @@ export class MerchantController {
       'getP95ConfirmationTimeChartData',
       merchant.id,
       period,
+    );
+  }
+
+  @Get(ROUTER.MERCHANT.ANALYTICS.P95_CONFIRMATION_TIME_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: P95ConfirmationTimeDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant P95 confirmation time forecast success')
+  async getP95ConfirmationTimeForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<P95ConfirmationTimeDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getP95ConfirmationTimeForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
     );
   }
 
@@ -437,6 +529,28 @@ export class MerchantController {
     );
   }
 
+  @Get(ROUTER.MERCHANT.ANALYTICS.DIRECT_DEPOSIT_SHARE_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: DirectDepositShareDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant direct deposit share forecast success')
+  async getDirectDepositShareForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<DirectDepositShareDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getDirectDepositShareForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.MERCHANT.ANALYTICS.AOV)
   @ApiResponse({
     status: 200,
@@ -475,6 +589,28 @@ export class MerchantController {
       'getAverageOrderValueChartData',
       merchant.id,
       period,
+    );
+  }
+
+  @Get(ROUTER.MERCHANT.ANALYTICS.AOV_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: AverageOrderValueDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant AOV forecast success')
+  async getAOVForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<AverageOrderValueDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getAverageOrderValueForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
     );
   }
 
@@ -519,6 +655,28 @@ export class MerchantController {
     );
   }
 
+  @Get(ROUTER.MERCHANT.ANALYTICS.REPEAT_CUSTOMER_RATE_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: RepeatCustomerRateDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant repeat customer rate forecast success')
+  async getRepeatCustomerRateForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<RepeatCustomerRateDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getRepeatCustomerRateForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
+    );
+  }
+
   @Get(ROUTER.MERCHANT.ANALYTICS.FUNNEL_CHART)
   @ApiResponse({
     status: 200,
@@ -532,7 +690,7 @@ export class MerchantController {
     @MerchantData() merchant: Merchant,
     @Param() _: IdDto,
     @Query() period: AnalyticsPeriodDto,
-  ): Promise<FunnelChartDto[]> {
+  ): Promise<FunnelChartDto> {
     return this.merchantService.callTransactionServiceMethod(
       'getFunnelChartData',
       merchant.id,
@@ -643,6 +801,28 @@ export class MerchantController {
       'getFailureShareChartData',
       merchant.id,
       period,
+    );
+  }
+
+  @Get(ROUTER.MERCHANT.ANALYTICS.FAILURE_SHARE_FORECAST)
+  @ApiResponse({
+    status: 200,
+    description: 'Success',
+    isArray: true,
+    type: FailuresShareDto,
+  })
+  @UseGuards(MerchantOwnerGuard)
+  @ResponseMessage('Get merchant failure share forecast success')
+  async getFailureShareForecast(
+    @MerchantData() merchant: Merchant,
+    @Param() _: IdDto,
+    @Query() forecast: ForecastDto,
+  ): Promise<FailuresShareDto[]> {
+    return this.merchantService.callTransactionServiceMethod(
+      'getFailureShareForecast',
+      merchant.id,
+      forecast.model,
+      forecast.horizon,
     );
   }
 }
