@@ -25,10 +25,40 @@ export default (): ApplicationConfigurations => {
       accessTtl: process.env.APP_AUTH_ACCESS_EXPIRATION_TIME,
       refreshSecret: process.env.APP_AUTH_REFRESH_SECRET,
       refreshTtl: process.env.APP_AUTH_REFRESH_EXPIRATION_TIME,
+      admin: {
+        username: process.env.APP_AUTH_ADMIN_USERNAME,
+        password: process.env.APP_AUTH_ADMIN_PASSWORD,
+        access: {
+          secret: process.env.APP_AUTH_ADMIN_ACCESS_SECRET,
+          ttl: process.env.APP_AUTH_ADMIN_ACCESS_EXPIRATION_TIME,
+        },
+        refresh: {
+          secret: process.env.APP_AUTH_ADMIN_REFRESH_SECRET,
+          ttl: process.env.APP_AUTH_ADMIN_REFRESH_EXPIRATION_TIME,
+        },
+      },
     },
     encryption: {
       iv: process.env.APP_ENCRYPTION_IV,
       key: process.env.APP_ENCRYPTION_KEY,
+    },
+    ton: {
+      blockchain: {
+        apiUrl: 'https://tonapi.io',
+        apiKey: process.env.APP_TON_API_KEY,
+      },
+      webhook: {
+        apiUrl: 'https://rt.tonapi.io',
+        apiKey: process.env.APP_TON_API_KEY,
+      },
+      client: {
+        rpc: 'https://toncenter.com/api/v2/jsonRPC',
+        rpcApiKey: process.env.APP_TON_RPC_API_KEY,
+      },
+      walletAddress: process.env.APP_TON_WALLET_ADDRESS,
+    },
+    forecast: {
+      url: process.env.APP_FORECAST_URL,
     },
     sentry: {
       dns: process.env.APP_SENTRY_DSN,
@@ -68,10 +98,24 @@ const validSchema = Joi.object({
   APP_AUTH_ACCESS_EXPIRATION_TIME: Joi.string().required(),
   APP_AUTH_REFRESH_SECRET: Joi.string().required(),
   APP_AUTH_REFRESH_EXPIRATION_TIME: Joi.string().required(),
+  APP_AUTH_ADMIN_USERNAME: Joi.string().required(),
+  APP_AUTH_ADMIN_PASSWORD: Joi.string().required(),
+  APP_AUTH_ADMIN_ACCESS_SECRET: Joi.string().required(),
+  APP_AUTH_ADMIN_ACCESS_EXPIRATION_TIME: Joi.string().required(),
+  APP_AUTH_ADMIN_REFRESH_SECRET: Joi.string().required(),
+  APP_AUTH_ADMIN_REFRESH_EXPIRATION_TIME: Joi.string().required(),
 
   // ENCRYPTION
   APP_ENCRYPTION_IV: Joi.string().required(),
   APP_ENCRYPTION_KEY: Joi.string().required(),
+
+  // TON
+  APP_TON_API_KEY: Joi.string().required(),
+  APP_TON_RPC_API_KEY: Joi.string().required(),
+  APP_TON_WALLET_ADDRESS: Joi.string().required(),
+
+  // FORECAST
+  APP_FORECAST_URL: Joi.string().required(),
 });
 
 const validate = (data: Record<string, unknown>) => {

@@ -29,14 +29,26 @@ export class TokenService {
   create({
     payload,
     isRefresh,
+    isAdmin,
   }: {
     payload: SessionData;
     isRefresh?: boolean;
+    isAdmin?: boolean;
   }): string {
     const secret = isRefresh
-      ? config.auth.refreshSecret
-      : config.auth.accessSecret;
-    const ttl = isRefresh ? config.auth.refreshTtl : config.auth.accessTtl;
+      ? isAdmin
+        ? config.auth.admin.refresh.secret
+        : config.auth.refreshSecret
+      : isAdmin
+        ? config.auth.admin.access.secret
+        : config.auth.accessSecret;
+    const ttl = isRefresh
+      ? isAdmin
+        ? config.auth.admin.refresh.ttl
+        : config.auth.refreshTtl
+      : isAdmin
+        ? config.auth.admin.access.ttl
+        : config.auth.accessTtl;
 
     return this.createJwt(payload, secret, ttl);
   }
@@ -44,13 +56,19 @@ export class TokenService {
   async verify<T>({
     token,
     isRefresh,
+    isAdmin,
   }: {
     token: string;
     isRefresh?: boolean;
+    isAdmin?: boolean;
   }): Promise<T> {
     const secret = isRefresh
-      ? config.auth.refreshSecret
-      : config.auth.accessSecret;
+      ? isAdmin
+        ? config.auth.admin.refresh.secret
+        : config.auth.refreshSecret
+      : isAdmin
+        ? config.auth.admin.access.secret
+        : config.auth.accessSecret;
 
     try {
       const status = await this.jwtService.verifyAsync(token, {

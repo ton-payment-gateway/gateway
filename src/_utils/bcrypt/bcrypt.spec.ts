@@ -29,13 +29,13 @@ describe('BcryptService', () => {
   });
 
   it('Compare hash success', async () => {
-    const status = await service.compareHash(hash, password);
+    const status = await service.compareHash(password, hash);
 
     expect(status).toBe(true);
   });
 
   it('Compare hash failed', async () => {
-    const status = await service.compareHash(hash, password + 1);
+    const status = await service.compareHash(password + 1, hash);
 
     expect(status).toBe(false);
   });

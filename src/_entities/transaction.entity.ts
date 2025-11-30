@@ -10,6 +10,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 
+import { ETransactionStatus } from '../../src/transaction/types';
 import { Merchant } from './merchant.entity';
 
 @Entity({
@@ -29,12 +30,44 @@ export class Transaction extends BaseEntity {
   })
   amount: string;
 
+  @Column({
+    default: 0,
+    type: 'numeric',
+    precision: 78,
+    scale: 9,
+    name: 'service_fee',
+  })
+  serviceFee: string;
+
   @Column('varchar', { nullable: false })
   @Index('uq_transaction_hash', { unique: true })
   hash: string;
 
   @Column('varchar', { nullable: false, default: '' })
   metadata: string;
+
+  @Column({
+    type: 'boolean',
+    default: false,
+    name: 'is_direct_deposit',
+  })
+  isDirectDeposit: boolean;
+
+  @Column({
+    type: 'varchar',
+    nullable: false,
+    name: 'status',
+    default: ETransactionStatus.COMPLETED,
+  })
+  status: ETransactionStatus;
+
+  @Column({
+    type: 'integer',
+    nullable: false,
+    name: 'confirmation_time',
+    default: 100,
+  })
+  confirmationTime!: number;
 
   @Column({
     name: 'merchant_id',

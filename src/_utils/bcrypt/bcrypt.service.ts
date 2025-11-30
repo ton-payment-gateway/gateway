@@ -9,7 +9,7 @@ export class BcryptService {
     return res;
   }
 
-  public async compareHash(hash: string, password: string) {
+  public async compareHash(password: string, hash: string) {
     const res = await compare(password, hash);
     return res;
   }

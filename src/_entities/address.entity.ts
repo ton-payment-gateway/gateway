@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -24,6 +25,7 @@ export class Address extends BaseEntity {
     type: 'varchar',
     nullable: false,
   })
+  @Index('uq_address_address', { unique: true })
   address: string;
 
   @Column({
@@ -37,6 +39,12 @@ export class Address extends BaseEntity {
     mnemonic: string[];
     walletId: string;
   };
+
+  @Column({
+    name: 'merchant_id',
+    type: 'uuid',
+  })
+  merchantId!: string;
 
   @Column('varchar', { nullable: false, default: '' })
   metadata: string;

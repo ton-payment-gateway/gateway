@@ -4,7 +4,14 @@ import {
   ApiOperation,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { Post, Body, Controller, UseGuards } from '@nestjs/common';
+import {
+  Post,
+  Body,
+  Controller,
+  UseGuards,
+  Headers,
+  Get,
+} from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 
@@ -58,8 +65,11 @@ export class AuthController {
   })
   @ApiOperation({ summary: 'Register' })
   @ResponseMessage('Register success')
-  async register(@Body() body: AuthDto): Promise<ResAuthDto> {
-    return this.authService.register(body);
+  async register(
+    @Body() body: AuthDto,
+    @Headers('x-real-ip') ipAddress: string,
+  ): Promise<ResAuthDto> {
+    return this.authService.register(body, ipAddress);
   }
 
   @Post(ROUTER.AUTH.REFRESH)
@@ -76,7 +86,7 @@ export class AuthController {
     return this.authService.refresh(data.id);
   }
 
-  @Post(ROUTER.AUTH.SESSION)
+  @Get(ROUTER.AUTH.SESSION)
   @ApiResponse({
     status: 200,
     type: ResGetSessionDto,

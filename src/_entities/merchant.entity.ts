@@ -2,7 +2,9 @@ import {
   BaseEntity,
   Column,
   CreateDateColumn,
+  DeleteDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   OneToMany,
@@ -14,6 +16,7 @@ import { Address } from './address.entity';
 import { ApiKey } from './api-key.entity';
 import { Transaction } from './transaction.entity';
 import { User } from './user.entity';
+import { encrypt } from '../../src/_utils/helpers';
 
 @Entity({
   name: 'merchants',
@@ -30,15 +33,18 @@ export class Merchant extends BaseEntity {
   @Column('varchar', { nullable: true, name: 'webhook_url' })
   webhookUrl: string;
 
+  @Column('varchar', { name: 'secret_key', transformer: encrypt })
+  secretKey: string;
+
   @Column({
     type: 'varchar',
     nullable: false,
   })
+  @Index('uq_merchant_address', { unique: true })
   address: string;
 
   @Column({
     type: 'jsonb',
-    default: null,
     nullable: false,
   })
   keys: {
@@ -65,6 +71,12 @@ export class Merchant extends BaseEntity {
     type: 'timestamptz',
   })
   updatedAt!: Date;
+
+  @DeleteDateColumn({
+    name: 'deleted_at',
+    type: 'timestamptz',
+  })
+  deletedAt!: Date;
 
   @ManyToOne(() => User, (user) => user.merchants)
   @JoinColumn({ name: 'user_id' })

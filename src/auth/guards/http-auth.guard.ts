@@ -13,7 +13,8 @@ import { UnauthorizedException } from '../../_core/exception/exception';
 
 export const HttpAuthGuard = ({
   isRefresh = false,
-}: { isRefresh?: boolean } = {}) => {
+  isAdmin = false,
+}: { isRefresh?: boolean; isAdmin?: boolean } = {}) => {
   @Injectable()
   class HttpAuthGuardMixin implements CanActivate {
     readonly tokenService: TokenService;
@@ -34,6 +35,7 @@ export const HttpAuthGuard = ({
           const user = await this.tokenService.verify<SessionData>({
             token: accessToken,
             isRefresh,
+            isAdmin,
           });
 
           if (!user) {

@@ -23,7 +23,8 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     const request = ctx.getRequest<Request>();
     let message =
       (exception as any)?.message?.message ||
-      (exception as any)?.response?.errorMessage;
+      (exception as any)?.response?.errorMessage ||
+      (exception as any)?.response?.message;
     const details = (exception as any)?.response?.details;
     let code = (exception as any)?.response?.errorCode || 'HttpException';
 

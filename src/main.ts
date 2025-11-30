@@ -11,6 +11,7 @@ import { init, setupNestErrorHandler } from '@sentry/nestjs';
 import { AppModule } from './app/app.module';
 import { BaseLogger } from './_core/logger/base-logger/base-logger';
 import { GlobalExceptionFilter } from './_core/exception/global.exception';
+import { ROUTER } from './_core/router';
 import { SwaggerModule } from '@nestjs/swagger';
 import { TransformInterceptor } from './_utils/interceptors/response.interceptor';
 import { ValidationPipeOptions } from './_core/pipe/validation.pipe';
@@ -34,7 +35,7 @@ async function bootstrap() {
   app.useGlobalInterceptors(new TransformInterceptor(new Reflector()));
 
   // Global prefix
-  app.setGlobalPrefix('api', { exclude: ['', 'ping', 'api/ping'] });
+  app.setGlobalPrefix(ROUTER.BASE, { exclude: ['', 'ping', 'api/ping'] });
 
   // Sentry
   if (config.sentry.isEnable) {

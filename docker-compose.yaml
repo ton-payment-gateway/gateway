@@ -10,8 +10,6 @@ services:
     env_file:
       - .env
     restart: always
-    networks:
-      - shared_network
     logging:
       driver: 'json-file'
       options:

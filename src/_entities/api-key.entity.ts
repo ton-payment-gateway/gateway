@@ -3,6 +3,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   JoinColumn,
   ManyToOne,
   PrimaryGeneratedColumn,
@@ -24,6 +25,7 @@ export class ApiKey extends BaseEntity {
   name: string;
 
   @Column('varchar', { nullable: false })
+  @Index('uq_api_key_key', { unique: true })
   key: string;
 
   @Column({
